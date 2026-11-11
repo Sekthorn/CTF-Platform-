@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Main Background: #0B0F0E */
+    --background: 165 22% 5%;
+    /* Main Text: #F1F5F9 */
+    --foreground: 210 40% 96.1%;
+
+    /* Card Background: #141A18 */
+    --card: 160 13% 9%;
+    --card-foreground: 210 40% 96.1%;
+
+    /* Elevated Card: #1B2420 */
+    --popover: 153 14% 12%;
+    --popover-foreground: 210 40% 96.1%;
+
+    /* Primary Accent: #22C55E (Cyber green) */
+    --primary: 142.1 70.6% 45.3%;
+    --primary-foreground: 165 22% 5%;
+
+    /* Secondary Accent: #38BDF8 (Cyan) */
+    --secondary: 198.6 93.2% 59.8%;
+    --secondary-foreground: 165 22% 5%;
+
+    /* Muted Text / Background */
+    --muted: 153 14% 12%;
+    --muted-foreground: 215.4 16.3% 65.1%;
+
+    /* Accent & Hover States */
+    --accent: 153 14% 14%;
+    --accent-foreground: 210 40% 96.1%;
+
+    /* Danger: #EF4444 */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Border: #26332D */
+    --border: 151 14% 17%;
+    --input: 151 14% 17%;
+    --ring: 142.1 70.6% 45.3%;
+
+    --radius: 0.625rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-cyber-bg text-cyber-text;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Cyber Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0B0F0E;
+}
+::-webkit-scrollbar-thumb {
+  background: #26332D;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #22C55E40;
+}

@@ -1,0 +1,461 @@
+// ==========================================
+// WebSec CTF - Core Database Schema
+// Datasource: MySQL 8.4
+// Standards: OWASP Top 10, WSTG, ASVS, API Security, CWE, CVSS, MITRE ATT&CK, PTES
+// ==========================================
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ------------------------------------------
+// Enums
+// ------------------------------------------
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ChallengeDifficulty {
+  BEGINNER
+  EASY
+  MEDIUM
+  HARD
+  EXPERT
+}
+
+enum ChallengeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SOLVED
+}
+
+enum LabStatus {
+  NOT_STARTED
+  STARTING
+  RUNNING
+  STOPPING
+  STOPPED
+  RESETTING
+  EXPIRED
+  FAILED
+}
+
+// ------------------------------------------
+// A. Users
+// ------------------------------------------
+
+model User {
+  id           String    @id @default(uuid())
+  username     String    @unique @db.VarChar(50)
+  email        String    @unique @db.VarChar(191)
+  passwordHash String    @db.VarChar(255)
+  role         UserRole  @default(USER)
+  avatarUrl    String?   @db.VarChar(255)
+  totalPoints  Int       @default(0)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  invitedById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relationships
+  invitedBy       User?             @relation("AdminInvitationsCreated", fields: [invitedById], references: [id], onDelete: SetNull)
+  invitedUsers    User[]            @relation("AdminInvitationsCreated")
+  sentInvitations AdminInvitation[] @relation("SentInvitations")
+  sessions        AdminSession[]
+  auditLogs       AuditLog[]
+  refreshTokens   RefreshToken[]
+  submissions     Submission[]
+  progress        UserChallengeProgress[]
+  lessonProgress  UserLessonProgress[]
+  labInstances    LabInstance[]
+
+  @@index([totalPoints(sort: Desc)])
+  @@map("users")
+}
+
+model AdminInvitation {
+  id          String    @id @default(uuid())
+  email       String    @db.VarChar(191)
+  tokenHash   String    @unique @db.VarChar(255)
+  invitedById String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  invitedBy User @relation("SentInvitations", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([tokenHash])
+  @@map("admin_invitations")
+}
+
+model AdminSession {
+  id           String   @id @default(uuid())
+  userId       String
+  sessionHash  String   @unique @db.VarChar(255)
+  ipAddress    String?  @db.VarChar(45)
+  userAgent    String?  @db.VarChar(255)
+  isRevoked    Boolean  @default(false)
+  expiresAt    DateTime
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionHash])
+  @@map("admin_sessions")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String   @db.VarChar(100)
+  details   String?  @db.Text
+  ipAddress String?  @db.VarChar(45)
+  userAgent String?  @db.VarChar(255)
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique @db.VarChar(255)
+  isRevoked Boolean  @default(false)
+  expiresAt DateTime
+  userAgent String?  @db.VarChar(255)
+  ipAddress String?  @db.VarChar(45)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ------------------------------------------
+// B. Challenge Categories
+// ------------------------------------------
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @db.VarChar(100)
+  slug        String   @unique @db.VarChar(100)
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  challenges Challenge[]
+
+  @@map("categories")
+}
+
+// ------------------------------------------
+// C. Challenges
+// ------------------------------------------
+
+model Challenge {
+  id           String              @id @default(uuid())
+  title        String              @db.VarChar(150)
+  slug         String              @unique @db.VarChar(150)
+  description  String              @db.Text
+  instructions String              @db.Text
+  difficulty   ChallengeDifficulty @default(EASY)
+  points       Int                 @default(100)
+  categoryId   String
+  status       ChallengeStatus     @default(DRAFT)
+  objectives   String?             @db.Text
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  // Relationships
+  category   Category             @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  references ChallengeReference[]
+  flags      ChallengeFlag[]
+  hints      Hint[]
+  submissions Submission[]
+  progress   UserChallengeProgress[]
+  lesson     KnowledgeLesson?
+  labInstances LabInstance[]
+
+  @@index([categoryId])
+  @@index([difficulty])
+  @@index([status])
+  @@index([points])
+  @@map("challenges")
+}
+
+// ------------------------------------------
+// D. Security References (OWASP, CWE, etc.)
+// ------------------------------------------
+
+model SecurityReference {
+  id            String   @id @default(uuid())
+  name          String   @db.VarChar(100)
+  referenceType String   @db.VarChar(50) // e.g. "OWASP_TOP_10", "CWE", "WSTG"
+  identifier    String   @db.VarChar(50) // e.g. "A03:2021", "CWE-89"
+  version       String?  @db.VarChar(20) // e.g. "2021", "4.12"
+  description   String   @db.Text
+  url           String?  @db.VarChar(255)
+  createdAt     DateTime @default(now())
+
+  // Relationships
+  challenges ChallengeReference[]
+
+  @@unique([referenceType, identifier])
+  @@map("security_references")
+}
+
+model ChallengeReference {
+  challengeId String
+  referenceId String
+
+  // Relationships
+  challenge Challenge         @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  reference SecurityReference @relation(fields: [referenceId], references: [id], onDelete: Cascade)
+
+  @@id([challengeId, referenceId])
+  @@index([referenceId])
+  @@map("challenge_references")
+}
+
+// ------------------------------------------
+// E. Challenge Flags
+// ------------------------------------------
+
+model ChallengeFlag {
+  id              String   @id @default(uuid())
+  challengeId     String
+  flagHash        String   @db.VarChar(255) // Salted hash, never plaintext
+  flagPrefix      String?  @default("WEBSEC{") @db.VarChar(20)
+  isCaseSensitive Boolean  @default(true)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relationships
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@index([challengeId])
+  @@map("challenge_flags")
+}
+
+// ------------------------------------------
+// F. Challenge Hints
+// ------------------------------------------
+
+model Hint {
+  id          String   @id @default(uuid())
+  challengeId String
+  title       String   @db.VarChar(100)
+  content     String   @db.Text
+  costPoints  Int      @default(0)
+  order       Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  // Relationships
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, order])
+  @@index([challengeId])
+  @@map("hints")
+}
+
+// ------------------------------------------
+// G. Challenge Submissions
+// ------------------------------------------
+
+model Submission {
+  id            String   @id @default(uuid())
+  userId        String
+  challengeId   String
+  instanceId    String?
+  submittedFlag String   @db.VarChar(255)
+  isCorrect     Boolean
+  pointsAwarded Int      @default(0)
+  submittedAt   DateTime @default(now())
+
+  // Relationships
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge   Challenge    @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  labInstance LabInstance? @relation(fields: [instanceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([challengeId])
+  @@index([instanceId])
+  @@index([submittedAt])
+  @@map("submissions")
+}
+
+// ------------------------------------------
+// H. User Challenge Progress
+// ------------------------------------------
+
+model UserChallengeProgress {
+  id           String         @id @default(uuid())
+  userId       String
+  challengeId  String
+  status       ProgressStatus @default(NOT_STARTED)
+  solvedAt     DateTime?
+  pointsEarned Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  // Relationships
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
+  @@index([status])
+  @@map("user_challenge_progress")
+}
+
+// ------------------------------------------
+// I. Knowledge & Security Lessons
+// ------------------------------------------
+
+model KnowledgeLesson {
+  id               String              @id @default(uuid())
+  challengeId      String              @unique
+  title            String              @db.VarChar(150)
+  slug             String              @unique @db.VarChar(150)
+  description      String              @db.Text
+  category         String              @db.VarChar(100)
+  difficulty       ChallengeDifficulty @default(BEGINNER)
+  owaspReference   String?             @db.VarChar(100)
+  cweReference     String?             @db.VarChar(100)
+  cvssScore        Float?
+  status           ChallengeStatus     @default(PUBLISHED)
+
+  // 10 Core Structured Sections
+  overview         String              @db.Text
+  rootCause        String              @db.Text
+  mechanics        String              @db.Text
+  attackScenario   String              @db.Text
+  securityImpact   String              @db.Text
+  prevention       String              @db.Text
+  vulnerableCode   String              @db.Text
+  secureCode       String              @db.Text
+  codeLanguage     String              @default("javascript") @db.VarChar(50)
+  realWorldExample String              @db.Text
+  referencesJson   String              @db.Text
+  keyTakeaways     String              @db.Text
+
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  // Relationships
+  challenge        Challenge           @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  userProgress     UserLessonProgress[]
+
+  @@index([category])
+  @@index([difficulty])
+  @@index([status])
+  @@map("knowledge_lessons")
+}
+
+model UserLessonProgress {
+  id          String         @id @default(uuid())
+  userId      String
+  lessonId    String
+  status      ProgressStatus @default(IN_PROGRESS)
+  completedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relationships
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      KnowledgeLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@index([status])
+  @@map("user_lesson_progress")
+}
+
+// ------------------------------------------
+// J. Lab Instances & Dynamic Per-Instance Flags
+// ------------------------------------------
+
+model LabInstance {
+  id            String       @id @default(uuid())
+  userId        String
+  challengeId   String
+  targetUrl     String       @db.VarChar(255)
+  status        LabStatus    @default(NOT_STARTED)
+  port          Int?
+  expiresAt     DateTime
+  startedAt     DateTime?
+  stoppedAt     DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relationships
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge   Challenge     @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  flag        InstanceFlag?
+  submissions Submission[]
+
+  @@unique([userId, challengeId])
+  @@index([userId])
+  @@index([challengeId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("lab_instances")
+}
+
+model InstanceFlag {
+  id          String      @id @default(uuid())
+  instanceId  String      @unique
+  flagHash    String      @db.VarChar(255)
+  flagPrefix  String      @default("WEBSEC{") @db.VarChar(20)
+  isUsed      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relationships
+  instance    LabInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+  @@index([isUsed])
+  @@map("instance_flags")
+}
+
+// ------------------------------------------
+// Foundational System Configuration
+// ------------------------------------------
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String   @db.Text
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_settings")
+}

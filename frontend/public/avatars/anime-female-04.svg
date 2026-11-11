@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <radialGradient id="bg-anime-female-04" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#321642" />
+      <stop offset="80%" stop-color="#1c0c24" />
+      <stop offset="100%" stop-color="#05070a" />
+    </radialGradient>
+    <linearGradient id="neon-anime-female-04" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d946ef" />
+      <stop offset="100%" stop-color="#d946ef" />
+    </linearGradient>
+    <filter id="glow-anime-female-04" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <clipPath id="circleClip-anime-female-04">
+      <circle cx="128" cy="128" r="124" />
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#circleClip-anime-female-04)">
+    <!-- Background Canvas -->
+    <rect width="256" height="256" fill="url(#bg-anime-female-04)" />
+
+    <!-- Cyber Matrix Grid / Circuit Accent in Background -->
+    <g stroke="#d946ef" stroke-opacity="0.12" stroke-width="1.2" fill="none">
+      <path d="M 0 64 H 256 M 0 128 H 256 M 0 192 H 256" />
+      <path d="M 64 0 V 256 M 128 0 V 256 M 192 0 V 256" />
+      <circle cx="128" cy="128" r="95" stroke-dasharray="4 6" />
+      <circle cx="128" cy="128" r="115" stroke-dasharray="2 8" />
+    </g>
+
+    <!-- Ambient Neon Aura Glow Behind Head -->
+    <circle cx="128" cy="115" r="70" fill="#d946ef" opacity="0.16" filter="url(#glow-anime-female-04)" />
+
+    <!-- Back Hair (if long or twin tails) -->
+    
+
+    
+
+    <!-- Cyber Jacket / Shoulders & Torso -->
+    <g>
+      <!-- Base Shoulders -->
+      <path d="M 40 256 Q 70 195 128 195 Q 186 195 216 256 Z" fill="#22112e" />
+      <!-- Collar -->
+      <path d="M 95 195 L 110 160 L 146 160 L 161 195 L 128 215 Z" fill="#22112e" stroke="#d946ef" stroke-opacity="0.4" stroke-width="1.5" />
+      <!-- Neon Trim Lines on Jacket -->
+      <path d="M 60 256 L 85 205 L 105 215" stroke="#d946ef" stroke-width="2" fill="none" opacity="0.8" filter="url(#glow-anime-female-04)" />
+      <path d="M 196 256 L 171 205 L 151 215" stroke="#d946ef" stroke-width="2" fill="none" opacity="0.8" filter="url(#glow-anime-female-04)" />
+      <!-- Central Cyber Zipper / Power Node -->
+      <line x1="128" y1="205" x2="128" y2="256" stroke="#d946ef" stroke-width="2.5" />
+      <circle cx="128" cy="208" r="3" fill="#ffffff" filter="url(#glow-anime-female-04)" />
+    </g>
+
+    <!-- Neck -->
+    <path d="M 112 150 L 112 185 Q 128 192 144 185 L 144 150 Z" fill="#fce7f3" opacity="0.95" />
+    <path d="M 112 150 L 112 165 Q 128 175 144 165 L 144 150 Z" fill="#000000" opacity="0.12" />
+
+    
+
+    <!-- Face Contour (Clean Anime Jawline) -->
+    <path d="M 74 105 Q 74 155 128 178 Q 182 155 182 105 Q 182 65 128 65 Q 74 65 74 105 Z" fill="#fce7f3" />
+
+    <!-- Cute Anime Blush Marks -->
+    <ellipse cx="92" cy="138" rx="8" ry="3.5" fill="#f43f5e" opacity="0.18" />
+    <ellipse cx="164" cy="138" rx="8" ry="3.5" fill="#f43f5e" opacity="0.18" />
+
+    <!-- Expressive Anime Eyes -->
+    <g>
+      <!-- Left Eye -->
+      <ellipse cx="102" cy="122" rx="12" ry="15" fill="#ffffff" />
+      <ellipse cx="102" cy="123" rx="8.5" ry="12" fill="#e879f9" />
+      <ellipse cx="102" cy="123" rx="5" ry="7" fill="#0f172a" />
+      <!-- Eye Highlights -->
+      <circle cx="99" cy="117" r="3" fill="#ffffff" />
+      <circle cx="105" cy="127" r="1.5" fill="#ffffff" />
+      <!-- Eyelashes & Brow -->
+      <path d="M 88 114 Q 102 107 116 113" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" />
+      <path d="M 89 104 Q 103 98 115 103" stroke="#a21caf" stroke-width="2.2" fill="none" stroke-linecap="round" />
+
+      <!-- Right Eye -->
+      <ellipse cx="154" cy="122" rx="12" ry="15" fill="#ffffff" />
+      <ellipse cx="154" cy="123" rx="8.5" ry="12" fill="#e879f9" />
+      <ellipse cx="154" cy="123" rx="5" ry="7" fill="#0f172a" />
+      <!-- Eye Highlights -->
+      <circle cx="151" cy="117" r="3" fill="#ffffff" />
+      <circle cx="157" cy="127" r="1.5" fill="#ffffff" />
+      <!-- Eyelashes & Brow -->
+      <path d="M 140 113 Q 154 107 168 114" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" />
+      <path d="M 141 103 Q 153 98 167 104" stroke="#a21caf" stroke-width="2.2" fill="none" stroke-linecap="round" />
+    </g>
+
+    <!-- Stylized Anime Nose -->
+    <circle cx="128" cy="136" r="1.2" fill="#d97706" opacity="0.6" />
+
+    <!-- Anime Mouth with Expression -->
+    
+      <path d="M 124 153 Q 133 156 138 150" stroke="#0f172a" stroke-width="2" fill="none" stroke-linecap="round" />
+    
+
+    <!-- Optional Tech Mask / Cybernetic Gear -->
+    
+
+    
+
+    
+
+    <!-- Anime Hair (Front Strands, Bangs, Highlights) -->
+    <g>
+      <!-- Main Hair Mass -->
+      <path d="M 68 100 Q 64 50 128 45 Q 192 50 188 100 Q 180 82 168 76 Q 128 72 88 76 Q 76 82 68 100 Z" fill="#a21caf" />
+
+      <!-- Bangs / Front Locks -->
+      <path d="M 72 90 Q 86 115 95 125 Q 92 105 104 85 Q 115 118 124 130 Q 126 102 136 82 Q 148 116 158 126 Q 158 100 172 88 Q 186 110 186 125 Q 192 85 180 65 Q 128 50 76 65 Z" fill="#d946ef" />
+
+      <!-- Spikes / Hair Strands Details -->
+      <path d="M 98 52 Q 112 30 132 46 Q 146 26 160 50" fill="#d946ef" />
+      <path d="M 72 70 Q 56 46 80 52" fill="#d946ef" />
+      <path d="M 184 70 Q 200 46 176 52" fill="#d946ef" />
+
+      <!-- Glowing Neon Hair Highlight Streak -->
+      <path d="M 88 66 Q 128 58 168 66" stroke="#d946ef" stroke-width="3" fill="none" opacity="0.6" stroke-linecap="round" filter="url(#glow-anime-female-04)" />
+    </g>
+
+    <!-- Headphones / Cyber Gear on Top -->
+    
+
+    <!-- Circular High-Tech Avatar Border Frame -->
+    <circle cx="128" cy="128" r="122" stroke="url(#neon-anime-female-04)" stroke-width="3" fill="none" filter="url(#glow-anime-female-04)" />
+    <circle cx="128" cy="128" r="126" stroke="#000000" stroke-width="2" fill="none" opacity="0.7" />
+
+    <!-- Role Tech Watermark Badge -->
+    <rect x="76" y="234" width="104" height="16" rx="4" fill="#030712" fill-opacity="0.9" stroke="#d946ef" stroke-width="1" />
+    <text x="128" y="245" fill="#d946ef" font-size="9" font-family="monospace" font-weight="bold" text-anchor="middle" letter-spacing="1">
+      XSS // CTF
+    </text>
+  </g>
+</svg>

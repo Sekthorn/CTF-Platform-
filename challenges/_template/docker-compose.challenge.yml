@@ -1,0 +1,28 @@
+# ===================================================
+# WebSec CTF - Standalone Challenge Runner
+# ===================================================
+services:
+  challenge-target:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: websec-challenge-template
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+    networks:
+      - websec-challenge-net
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+networks:
+  websec-challenge-net:
+    name: websec-challenge-net
+    driver: bridge

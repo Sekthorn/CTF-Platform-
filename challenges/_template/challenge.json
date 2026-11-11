@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "id": "template-challenge",
+  "title": "Example Vulnerable Scenario",
+  "slug": "example-vulnerable-scenario",
+  "category": "Injection",
+  "difficulty": "Easy",
+  "points": 100,
+  "shortDescription": "Brief summary of the vulnerability target and objective.",
+  "description": "Full vulnerability background, contextual lore, and assessment scope.",
+  "instructions": "1. Inspect the input field.\n2. Formulate your exploit payload.\n3. Retrieve the flag from /flag.txt or restricted endpoint.",
+  "flags": [
+    {
+      "flag": "WEBSEC{sample_flag_proof_of_concept_2026}",
+      "isCaseSensitive": true
+    }
+  ],
+  "hints": [
+    {
+      "order": 1,
+      "title": "Initial Inspection",
+      "costPoints": 0,
+      "content": "Check browser developer tools or HTTP network tab for dynamic parameters."
+    }
+  ],
+  "references": [
+    {
+      "referenceType": "OWASP_TOP_10",
+      "identifier": "A03:2021"
+    },
+    {
+      "referenceType": "CWE",
+      "identifier": "CWE-89"
+    }
+  ],
+  "runtime": {
+    "type": "docker",
+    "port": 8080,
+    "memoryLimit": "256M",
+    "cpuLimit": "0.5"
+  }
+}

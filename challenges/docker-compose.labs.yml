@@ -1,0 +1,124 @@
+services:
+  # ==========================================================
+  # Category 1: Authentication & Access Control Lab (Port 8081)
+  # Covers Challenges 01 - 10
+  # ==========================================================
+  lab-auth:
+    build:
+      context: ./auth-access-control
+      dockerfile: Dockerfile
+    container_name: websec-lab-auth
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
+    networks:
+      - websec-challenge-net
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+  # ==========================================================
+  # Category 2: SQL Injection Practice Lab (Port 8082)
+  # Covers Challenges 11 - 20
+  # ==========================================================
+  lab-sqli:
+    build:
+      context: ./sql-injection
+      dockerfile: Dockerfile
+    container_name: websec-lab-sqli
+    ports:
+      - "8082:8080"
+    restart: unless-stopped
+    networks:
+      - websec-challenge-net
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+  # ==========================================================
+  # Category 3: Cross-Site Scripting (XSS) Sandbox (Port 8083)
+  # Covers Challenges 21 - 30
+  # ==========================================================
+  lab-xss:
+    build:
+      context: ./cross-site-scripting
+      dockerfile: Dockerfile
+    container_name: websec-lab-xss
+    ports:
+      - "8083:8080"
+    restart: unless-stopped
+    networks:
+      - websec-challenge-net
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+  # ==========================================================
+  # Category 4: File Handling & Path Traversal Lab (Port 8084)
+  # Covers Challenges 31 - 40
+  # ==========================================================
+  lab-files:
+    build:
+      context: ./file-handling-path-traversal
+      dockerfile: Dockerfile
+    container_name: websec-lab-files
+    ports:
+      - "8084:8080"
+    restart: unless-stopped
+    networks:
+      - websec-challenge-net
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+  # ==========================================================
+  # Category 5: API Security & Server-Side Lab (Port 8085)
+  # Covers Challenges 41 - 50
+  # ==========================================================
+  lab-api:
+    build:
+      context: ./api-security-server-side
+      dockerfile: Dockerfile
+    container_name: websec-lab-api
+    ports:
+      - "8085:8080"
+    restart: unless-stopped
+    networks:
+      - websec-challenge-net
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+networks:
+  websec-challenge-net:
+    driver: bridge
