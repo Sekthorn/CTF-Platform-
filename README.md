@@ -64,7 +64,7 @@ WebSec CTF runs out-of-the-box with **Docker Compose**, automatically spinning u
 
 ### 📋 Prerequisites:
 - **[Git](https://git-scm.com/)**
-- **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** (Make sure Docker is running)
+- **Docker** ([Docker Desktop](https://www.docker.com/products/docker-desktop/) on Windows/Mac, or `docker.io` on Linux/Kali)
 
 ### 💻 Step-by-Step Instructions:
 
@@ -74,14 +74,19 @@ git clone https://github.com/Sekthorn/CTF-Platform-.git
 cd CTF-Platform-
 
 # Step 2: Copy the configuration template
-# On Linux / macOS:
+# On Linux / macOS / Kali:
 cp .env.example .env
 
 # On Windows (PowerShell):
 Copy-Item .env.example .env
 
-# Step 3: Launch the platform (Builds, starts, migrates & seeds automatically)
+# Step 3: Launch the platform
+# On Windows / macOS / Ubuntu:
 docker compose up -d --build
+
+# On Kali Linux (if using Podman, enable socket first):
+# systemctl --user enable --now podman.socket
+# docker compose up -d --build
 ```
 
 ### 🌐 Accessing the Platform:

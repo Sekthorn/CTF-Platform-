@@ -63,6 +63,13 @@ Run this single command:
 docker compose up -d --build
 ```
 
+> 🐧 **Kali Linux Tip**:
+> If Kali displays *"Cannot connect to the Docker daemon at podman.sock"*, enable the background socket service first:
+> ```bash
+> systemctl --user enable --now podman.socket
+> ```
+> *(Or install official Docker: `sudo apt update && sudo apt install -y docker.io docker-compose-v2 && sudo systemctl enable --now docker && sudo usermod -aG docker $USER && newgrp docker`)*
+
 #### What Docker is doing automatically behind the scenes:
 1. 🗄️ Starts **MySQL 8.4** database and **Redis 7.4** cache.
 2. 📦 Applies all database migrations (`prisma migrate deploy`).

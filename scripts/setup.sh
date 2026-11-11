@@ -29,6 +29,15 @@ fi
 
 echo -e "${GREEN}✓ Docker and Docker Compose detected.${NC}"
 
+# Check if Docker or Podman daemon is active (especially on Kali Linux)
+if ! docker info &> /dev/null; then
+    if command -v podman &> /dev/null; then
+        echo -e "${YELLOW}Notice: Detected Podman on Linux. Enabling podman.socket service...${NC}"
+        systemctl --user enable --now podman.socket 2>/dev/null || true
+        export DOCKER_HOST="unix:///run/user/$(id -u)/podman/podman.sock"
+    fi
+fi
+
 # 2. Environment Configuration
 echo -e "\n${YELLOW}[2/4] Configuring environment (.env)...${NC}"
 
