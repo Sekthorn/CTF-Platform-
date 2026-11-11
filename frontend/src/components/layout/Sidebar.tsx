@@ -289,6 +289,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <LogOut className="w-4 h-4 flex-shrink-0" />
           {!collapsed && <span>Logout</span>}
         </button>
+
+        {!collapsed && (
+          <div className="pt-1 text-[10px] font-mono text-cyber-muted/50 text-center tracking-tight">
+            © 2026 SEK Thorn. All rights reserved.
+          </div>
+        )}
       </div>
     </aside>
   );

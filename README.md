@@ -194,6 +194,15 @@ Please read our [Security Policy](SECURITY.md) for vulnerability disclosure proc
 
 ---
 
+## 👨‍💻 Author & Copyright
+
+**WebSec CTF** is designed, architected, and developed by:
+- **Creator & Lead Developer**: **SEK Thorn** ([@Sekthorn](https://github.com/Sekthorn))
+- **Copyright**: © 2026 **SEK Thorn**. All rights reserved.
+
+---
+
 ## 📄 License
 
-This project is open-source under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE) — see the [LICENSE](LICENSE) file for details.  
+Copyright (c) 2026 SEK Thorn. All rights reserved.

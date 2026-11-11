@@ -2,9 +2,9 @@
   "name": "backend",
   "version": "0.0.1",
   "description": "WebSec CTF - Backend API",
-  "author": "",
+  "author": "SEK Thorn",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "build": "nest build && tsc prisma/seed.ts --outDir dist/prisma --skipLibCheck",
     "seed:prod": "node dist/prisma/seed.js",

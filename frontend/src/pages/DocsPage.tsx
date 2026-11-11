@@ -103,6 +103,16 @@ export const DocsPage: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Author & Copyright Footer */}
+      <div className="pt-6 border-t border-cyber-border/60 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono text-cyber-muted">
+        <div>
+          WebSec CTF — Designed & Architected by <span className="text-emerald-400 font-bold">SEK Thorn</span>
+        </div>
+        <div className="text-[11px] text-cyber-muted/70">
+          © 2026 SEK Thorn. All rights reserved. (MIT License)
+        </div>
+      </div>
     </div>
   );
 };
