@@ -56,23 +56,36 @@
 
 ---
 
-## ⚡ 1-Command Quickstart (Like OWASP Juice Shop)
+## ⚡ Quickstart Guide (From Clone to Running in 3 Minutes)
 
-WebSec CTF runs out-of-the-box with **one single Docker command**, automatically spinning up MySQL 8.4, Redis, the NestJS Backend API, applying database migrations, seeding initial data, and serving the React Frontend via an Nginx reverse proxy.
+WebSec CTF runs out-of-the-box with **Docker Compose**, automatically spinning up MySQL 8.4, Redis, the NestJS Backend API, applying database migrations, seeding 63 challenges + 63 defense guides, and serving the React Frontend via Nginx.
+
+> 📖 **Full Beginner Walkthrough**: See our dedicated [**QUICKSTART.md**](QUICKSTART.md) for detailed step-by-step guidance and troubleshooting.
+
+### 📋 Prerequisites:
+- **[Git](https://git-scm.com/)**
+- **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** (Make sure Docker is running)
+
+### 💻 Step-by-Step Instructions:
 
 ```bash
-# 1. Clone the repository
+# Step 1: Clone the repository
 git clone https://github.com/Sekthorn/CTF-Platform-.git
 cd CTF-Platform-
 
-# 2. Copy the environment configuration
+# Step 2: Copy the configuration template
+# On Linux / macOS:
 cp .env.example .env
 
-# 3. Launch the platform (Builds, starts, migrates & seeds automatically)
+# On Windows (PowerShell):
+Copy-Item .env.example .env
+
+# Step 3: Launch the platform (Builds, starts, migrates & seeds automatically)
 docker compose up -d --build
 ```
 
 ### 🌐 Accessing the Platform:
+Once the command finishes, open your browser:
 - **Web Application & UI**: [http://localhost](http://localhost) (Port 80)
 - **Backend REST API**: [http://localhost/api/v1](http://localhost/api/v1) (or direct: `http://localhost:3000/api/v1`)
 - **Swagger OpenAPI Docs**: [http://localhost/api/v1/docs](http://localhost/api/v1/docs)
@@ -80,10 +93,10 @@ docker compose up -d --build
 
 ### 🔐 Default Pre-Seeded Accounts:
 
-| Role | Username | Email / Login | Password |
-|---|---|---|---|
-| **Student / Researcher** | `student_hacker` | `student@websec.ctf` | `StudentPass2026!` |
-| **Root Administrator** | `admin` | `admin@websec.ctf` | `AdminSecurePass2026!` |
+| Role | Username | Email / Login | Password | Purpose |
+|---|---|---|---|---|
+| **Student / Researcher** | `student_hacker` | `student@websec.ctf` | `StudentPass2026!` | Solve challenges, submit flags, read security dossiers |
+| **Root Administrator** | `admin` | `admin@websec.ctf` | `AdminSecurePass2026!` | Platform management, metrics, and administration |
 
 ---
 
