@@ -71,7 +71,7 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
       JWT_SECRET: ${JWT_SECRET:-websec_ctf_super_secret_jwt_key_2026_change_in_prod}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-websec_ctf_super_secret_refresh_key_2026}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
     ports:
       - "${BACKEND_PORT:-3000}:3000"

@@ -84,7 +84,7 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:-websec_ctf_production_jwt_secret_key_change_in_prod}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-websec_ctf_production_jwt_refresh_secret_change_in_prod}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
     depends_on:
       mysql:
