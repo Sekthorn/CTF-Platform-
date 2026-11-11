@@ -78,9 +78,12 @@ docker compose up -d --build
 - **Swagger OpenAPI Docs**: [http://localhost/api/v1/docs](http://localhost/api/v1/docs)
 - **Service Health Check**: [http://localhost/api/v1/health](http://localhost/api/v1/health)
 
-### 🔐 Default Administrator Account:
-- **Email**: `admin@websec.ctf` (or username `admin`)
-- **Password**: `AdminSecurePass2026!`
+### 🔐 Default Pre-Seeded Accounts:
+
+| Role | Username | Email / Login | Password |
+|---|---|---|---|
+| **Student / Researcher** | `student_hacker` | `student@websec.ctf` | `StudentPass2026!` |
+| **Root Administrator** | `admin` | `admin@websec.ctf` | `AdminSecurePass2026!` |
 
 ---
 
