@@ -136,7 +136,24 @@ docker compose logs -f backend
   4. Run `docker compose up -d`.
   5. Access the platform at **[http://localhost:8080](http://localhost:8080)**.
 
-### Problem 3: I want to reset everything back to fresh state
+### Problem 3: Kali Linux — "Cannot connect to the Docker daemon at podman.sock"
+- **Reason**: Kali Linux has **Podman** installed instead of standard Docker, and its background socket service is not started.
+- **Quick Fix (Option A - Enable Podman socket)**:
+  ```bash
+  systemctl --user enable --now podman.socket
+  docker compose up -d --build
+  ```
+- **Recommended Fix (Option B - Install standard Docker on Kali)**:
+  ```bash
+  sudo apt update
+  sudo apt install -y docker.io docker-compose-v2
+  sudo systemctl enable --now docker
+  sudo usermod -aG docker $USER
+  newgrp docker
+  docker compose up -d --build
+  ```
+
+### Problem 4: I want to reset everything back to fresh state
 If you want to wipe the database and restart from zero:
 ```bash
 docker compose down -v
