@@ -59,6 +59,7 @@ export const ChallengeWorkspacePage: React.FC = () => {
   const [targetPort, setTargetPort] = useState<string>('5173');
   const [instanceId, setInstanceId] = useState<string | null>(null);
   const [copiedHostPort, setCopiedHostPort] = useState<boolean>(false);
+  const [copiedTargetUrl, setCopiedTargetUrl] = useState<boolean>(false);
 
   // Submission State
   const [flagInput, setFlagInput] = useState<string>('');
@@ -594,6 +595,19 @@ export const ChallengeWorkspacePage: React.FC = () => {
     setTimeout(() => setCopiedHostPort(false), 2000);
   };
 
+  const getTargetBaseUrl = () => {
+    const portStr = targetPort && targetPort !== '80' && targetPort !== '443' ? `:${targetPort}` : '';
+    const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:';
+    return `${protocol}//${targetHost}${portStr}/api/v1/targets/${slug || challenge?.slug || ''}`;
+  };
+
+  const handleCopyTargetUrl = () => {
+    const fullUrl = getTargetBaseUrl();
+    navigator.clipboard?.writeText(fullUrl);
+    setCopiedTargetUrl(true);
+    setTimeout(() => setCopiedTargetUrl(false), 2000);
+  };
+
   // Handle Flag Submission with Rate Limiting
   const handleSubmitFlag = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1040,6 +1054,16 @@ export const ChallengeWorkspacePage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Target Endpoint Base Path */}
+              <div className="p-2.5 rounded-lg bg-cyber-bg border border-cyber-border space-y-1">
+                <span className="text-[10px] text-cyber-muted block font-sans">
+                  Target Endpoint Path
+                </span>
+                <span className="text-emerald-400 font-mono text-[11px] block select-all break-all">
+                  /api/v1/targets/{slug || challenge?.slug || ''}
+                </span>
+              </div>
+
               {/* Opaque instance token (if assigned, no username exposed) */}
               {instanceId && (
                 <div className="p-2.5 rounded-lg bg-cyber-bg/70 border border-cyber-border/80">
@@ -1052,25 +1076,46 @@ export const ChallengeWorkspacePage: React.FC = () => {
                 </div>
               )}
 
-              {/* Single Copy button copying host:port */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopyHostPort}
-                className="w-full border-cyber-border hover:bg-cyber-elevated text-cyber-text font-mono text-xs h-9 flex items-center justify-center gap-2"
-              >
-                {copiedHostPort ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-emerald-400">Copied {targetHost}:{targetPort}</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5 text-cyber-muted" />
-                    <span>Copy Host:Port</span>
-                  </>
-                )}
-              </Button>
+              {/* Action Buttons: Copy Target URL and Copy Host:Port */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyTargetUrl}
+                  className="w-full border-cyber-border hover:bg-cyber-elevated text-cyber-text font-mono text-[11px] h-9 flex items-center justify-center gap-1.5"
+                >
+                  {copiedTargetUrl ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400">Copied URL</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-cyber-muted" />
+                      <span>Copy URL</span>
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyHostPort}
+                  className="w-full border-cyber-border hover:bg-cyber-elevated text-cyber-text font-mono text-[11px] h-9 flex items-center justify-center gap-1.5"
+                >
+                  {copiedHostPort ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400">Copied Host</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-cyber-muted" />
+                      <span>Copy Host:Port</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
 
             <p className="text-[11px] text-cyber-muted/90 text-center font-mono">

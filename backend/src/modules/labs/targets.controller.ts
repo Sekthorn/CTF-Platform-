@@ -338,17 +338,27 @@ export class TargetsController {
     // -----------------------------------------------------------------------
     // Category 1: Authentication & Access Control Scenarios
     // -----------------------------------------------------------------------
-    if (actualSubpath.startsWith('/api/login')) {
+    if (actualSubpath.startsWith('/api/login') || actualSubpath.startsWith('/login')) {
       const body = req.body || {};
       const username = body.username || req.query.username || '';
       const password = body.password || req.query.password || '';
 
-      // Platform administrator account is strictly secured and cannot be brute-forced or compromised
-      if (username.toLowerCase() === 'admin') {
-        return res.status(HttpStatus.FORBIDDEN).json({
-          error: 'Administrator Account Protected',
-          message:
-            'Platform administrator accounts are strictly secured with enterprise password complexity and multi-factor policies. Admin credentials cannot be compromised.',
+      // Challenge: Weak Admin Password (admin:admin2026)
+      if (
+        (challenge.slug === 'weak-admin-password' || categorySlug === 'auth-access-control') &&
+        username.toLowerCase() === 'admin'
+      ) {
+        if (password === 'admin2026' || password === 'admin') {
+          return res.status(HttpStatus.OK).json({
+            success: true,
+            message: 'Authentication successful for target admin',
+            user: { id: 1, username: 'admin', role: 'admin' },
+            flag: rawFlag,
+          });
+        }
+        return res.status(HttpStatus.UNAUTHORIZED).json({
+          error: 'Incorrect password for user',
+          message: 'Authentication failed for admin account',
         });
       }
 
@@ -372,7 +382,7 @@ export class TargetsController {
         });
       }
 
-      if (username && username !== 'target_user') {
+      if (username && username !== 'target_user' && username !== 'admin') {
         return res.status(HttpStatus.NOT_FOUND).json({
           error: 'Account not found',
           message: 'The requested username does not exist',
