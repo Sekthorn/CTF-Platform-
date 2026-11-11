@@ -128,6 +128,24 @@ docker compose logs -f backend
 
 ---
 
+## 🔄 How to Update to the Latest Version
+
+Whenever new features, challenges, or bug fixes are released, existing users only need to run **2 commands** to update:
+
+```bash
+# 1. Download the latest code updates from GitHub
+git pull origin main
+
+# 2. Rebuild and restart the containers
+docker compose up -d --build
+```
+
+#### What happens during update:
+- ✅ **Your solved challenges & points are safe**: Your existing progress in the MySQL database is preserved.
+- 🚀 **New challenges & features appear automatically**: Database migrations and seed scripts automatically insert new lessons and challenges without overwriting your account.
+
+---
+
 ## ❓ Troubleshooting & FAQs
 
 ### Problem 1: "Cannot connect to the Docker daemon"

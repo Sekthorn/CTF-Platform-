@@ -126,6 +126,17 @@ docker compose down
 > [!NOTE]
 > Running `docker compose down` stops the containers while keeping the database volume (`mysql_data`) completely safe. Running `docker compose up -d` will immediately restore your database state.
 
+### 🔄 Updating to the Latest Version:
+When new challenges, security lessons, or features are pushed to GitHub, existing users can update with two commands:
+```bash
+# 1. Pull the latest code updates
+git pull origin main
+
+# 2. Rebuild and restart services
+docker compose up -d --build
+```
+*(Your solved flags, scores, and registered user accounts will remain completely safe).*
+
 ### Resetting the Database (Fresh Start):
 > [!CAUTION]
 > **Data Loss Warning**: The following command deletes all MySQL challenge progress, user accounts, and score logs!
