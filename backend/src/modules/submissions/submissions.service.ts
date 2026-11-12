@@ -126,6 +126,29 @@ export class SubmissionsService {
       isMatch = true;
     }
 
+    // Also check dynamic HMAC fallback if expectedRawFlag was canonical
+    if (!isMatch) {
+      const secretKey =
+        process.env.JWT_SECRET || 'websec_ctf_platform_secret_key_2026';
+      const cleanSlug = challenge.slug.replace(/-/g, '_').toLowerCase();
+      const entropy = crypto
+        .createHmac('sha256', secretKey)
+        .update(`${userId}:${cleanSlug}`)
+        .digest('hex')
+        .substring(0, 16);
+      const dynamicFlag = `WEBSEC{${cleanSlug}_${entropy}}`;
+      const dynamicHash = crypto
+        .createHash('sha256')
+        .update(dynamicFlag.trim())
+        .digest('hex');
+      if (
+        rawFlag.trim() === dynamicFlag.trim() ||
+        submittedHash === dynamicHash
+      ) {
+        isMatch = true;
+      }
+    }
+
     // Also link player's LabInstance if one exists in the database
     const userLab = await this.prisma.labInstance.findUnique({
       where: {

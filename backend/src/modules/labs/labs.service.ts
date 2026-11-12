@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LabStatus, ChallengeStatus } from '@prisma/client';
+import { STATIC_CHALLENGE_FLAGS } from '../submissions/static-flags-catalog';
 import * as crypto from 'crypto';
 
 export interface LabInstanceResponse {
@@ -39,6 +40,16 @@ export class LabsService {
     userId: string,
     challengeSlug: string,
   ): { rawFlag: string; flagHash: string } {
+    // If an official canonical challenge flag exists, use it so target response matches lesson guidance!
+    if (STATIC_CHALLENGE_FLAGS[challengeSlug]) {
+      const canonicalFlag = STATIC_CHALLENGE_FLAGS[challengeSlug];
+      const flagHash = crypto
+        .createHash('sha256')
+        .update(canonicalFlag.trim())
+        .digest('hex');
+      return { rawFlag: canonicalFlag, flagHash };
+    }
+
     const secretKey =
       process.env.JWT_SECRET || 'websec_ctf_platform_secret_key_2026';
     const cleanSlug = challengeSlug.replace(/-/g, '_').toLowerCase();
