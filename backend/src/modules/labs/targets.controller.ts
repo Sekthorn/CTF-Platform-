@@ -24,6 +24,17 @@ export class TargetsController {
 
   constructor(private readonly labsService: LabsService) {}
 
+  private extractSubPath(req: Request): string {
+    const raw = (req.params as any)?.path ?? (req.params as any)?.[0] ?? '';
+    if (Array.isArray(raw)) {
+      const joined = raw.filter(Boolean).join('/');
+      return joined ? `/${joined}` : '';
+    }
+    const str = String(raw || '');
+    if (!str) return '';
+    return str.startsWith('/') ? str : `/${str}`;
+  }
+
   /**
    * Two-Segment Route: /api/v1/targets/:username/:slug
    * Provides immediate access to player's integrated target without manual lab provisioning.
@@ -41,7 +52,21 @@ export class TargetsController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    await this.dispatchTarget(username, slug, '', req, res);
+    try {
+      await this.dispatchTarget(username, slug, '', req, res);
+    } catch (err: any) {
+      this.logger.error(
+        `Error in handleUserChallengeRoot: ${err.message}`,
+        err.stack,
+      );
+      if (!res.headersSent) {
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+          error: 'Target Execution Error',
+          message: err.message || 'Target routing error',
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+      }
+    }
   }
 
   @All(':username/:slug/*path')
@@ -59,9 +84,22 @@ export class TargetsController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    const rawParam = (req.params as any)?.path || req.params?.[0] || '';
-    const subPath = rawParam.startsWith('/') ? rawParam : `/${rawParam}`;
-    await this.dispatchTarget(username, slug, subPath, req, res);
+    try {
+      const subPath = this.extractSubPath(req);
+      await this.dispatchTarget(username, slug, subPath, req, res);
+    } catch (err: any) {
+      this.logger.error(
+        `Error in handleUserChallengeSubpath: ${err.message}`,
+        err.stack,
+      );
+      if (!res.headersSent) {
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+          error: 'Target Subpath Error',
+          message: err.message || 'Target routing error',
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+      }
+    }
   }
 
   /**
@@ -82,7 +120,21 @@ export class TargetsController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    await this.dispatchTarget(identifier, undefined, '', req, res);
+    try {
+      await this.dispatchTarget(identifier, undefined, '', req, res);
+    } catch (err: any) {
+      this.logger.error(
+        `Error in handleSingleIdentifierRoot: ${err.message}`,
+        err.stack,
+      );
+      if (!res.headersSent) {
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+          error: 'Target Execution Error',
+          message: err.message || 'Target routing error',
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+      }
+    }
   }
 
   @All(':identifier/*path')
@@ -99,9 +151,22 @@ export class TargetsController {
     @Req() req: Request,
     @Res() res: Response,
   ): Promise<void> {
-    const rawParam = (req.params as any)?.path || req.params?.[0] || '';
-    const subPath = rawParam.startsWith('/') ? rawParam : `/${rawParam}`;
-    await this.dispatchTarget(identifier, undefined, subPath, req, res);
+    try {
+      const subPath = this.extractSubPath(req);
+      await this.dispatchTarget(identifier, undefined, subPath, req, res);
+    } catch (err: any) {
+      this.logger.error(
+        `Error in handleSingleIdentifierSubpath: ${err.message}`,
+        err.stack,
+      );
+      if (!res.headersSent) {
+        res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+          error: 'Target Subpath Error',
+          message: err.message || 'Target routing error',
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+      }
+    }
   }
 
   private async dispatchTarget(
@@ -135,9 +200,10 @@ export class TargetsController {
       }
 
     const { challenge, rawFlag, user } = context;
-    const actualSubpath = context.effectiveSubpath
+    const rawSubpath = context.effectiveSubpath
       ? `${context.effectiveSubpath}${subPath}`
       : subPath;
+    const actualSubpath = rawSubpath ? rawSubpath.replace(/\/+/g, '/') : '';
     const categorySlug = challenge.category?.slug || '';
     const method = req.method.toUpperCase();
 
