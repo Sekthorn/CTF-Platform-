@@ -411,22 +411,30 @@ export class TargetsController {
       const username = (body.username || body.identifier || req.query.username || req.query.identifier || '').toString();
       const password = (body.password || req.query.password || '').toString();
 
-      // Challenge: Weak Admin Password (admin:admin2026)
+      // Challenge: Weak Admin Password & Username Enumeration targets
+      const validUsers: Record<string, string[]> = {
+        admin: ['admin2026', 'admin'],
+        sec_analyst: ['password123', 'admin2026'],
+      };
+
+      const lowerUser = username.toLowerCase();
       if (
-        (challenge.slug === 'weak-admin-password' || categorySlug === 'auth-access-control') &&
-        username.toLowerCase() === 'admin'
+        (challenge.slug === 'weak-admin-password' ||
+          challenge.slug === 'username-enumeration' ||
+          categorySlug === 'auth-access-control') &&
+        validUsers[lowerUser]
       ) {
-        if (password === 'admin2026' || password === 'admin') {
+        if (validUsers[lowerUser].includes(password)) {
           return res.status(HttpStatus.OK).json({
             success: true,
-            message: 'Authentication successful for target admin',
-            user: { id: 1, username: 'admin', role: 'admin' },
+            message: `Authentication successful for target user ${lowerUser}`,
+            user: { id: 1, username: lowerUser, role: 'operator' },
             flag: rawFlag,
           });
         }
         return res.status(HttpStatus.UNAUTHORIZED).json({
           error: 'Incorrect password for user',
-          message: 'Authentication failed for admin account',
+          message: `Authentication failed for ${lowerUser} account`,
         });
       }
 
@@ -450,7 +458,7 @@ export class TargetsController {
         });
       }
 
-      if (username && username !== 'target_user' && username !== 'admin') {
+      if (username && username !== 'target_user' && !validUsers[lowerUser]) {
         return res.status(HttpStatus.NOT_FOUND).json({
           error: 'Account not found',
           message: 'The requested username does not exist',
