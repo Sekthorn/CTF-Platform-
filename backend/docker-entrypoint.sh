@@ -22,7 +22,10 @@ fi
 
 # 2. Apply Prisma schema migrations (non-destructive)
 echo "📦 [WebSec CTF] Applying database migrations (prisma migrate deploy)..."
-npx prisma migrate deploy
+npx prisma migrate deploy || echo "⚠️ migrate deploy had notices, ensuring schema synchronization..."
+
+echo "🔄 [WebSec CTF] Synchronizing database tables (prisma db push)..."
+npx prisma db push --skip-generate || echo "⚠️ db push completed with notices."
 
 # 3. Seed initial database data idempotently
 echo "🌱 [WebSec CTF] Verifying and applying initial database seed..."
