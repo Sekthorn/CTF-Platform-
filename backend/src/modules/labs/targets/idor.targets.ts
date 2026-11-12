@@ -20,7 +20,7 @@ export function handleIdorTarget(
   // Scenario: Billing portal with sequential numeric invoice IDs.
   // Invoice 1000 belongs to the CEO/Administrator and contains the flag.
   // -------------------------------------------------------------------------
-  if (slug === 'invoice-vault') {
+  if (slug === 'invoice-vault' || slug === 'bola-order-resource-hijack') {
     // Root discovery endpoint
     if (
       cleanPath === '/' ||

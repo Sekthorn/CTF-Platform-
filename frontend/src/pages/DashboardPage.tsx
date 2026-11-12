@@ -334,7 +334,9 @@ export const DashboardPage: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-mono text-cyber-muted line-clamp-1">
-                      {challenge.category?.name || challenge.category}
+                      {typeof challenge.category === 'object' && challenge.category !== null
+                        ? (challenge.category as any).name
+                        : (challenge.category || 'Web Security')}
                     </span>
                     <DifficultyBadge difficulty={challenge.difficulty} />
                   </div>
@@ -394,7 +396,7 @@ export const DashboardPage: React.FC = () => {
                       </Link>
                     </div>
                     <span className="text-[10px] text-cyber-muted font-mono block">
-                      {c.owaspReference || 'OWASP'} · {c.category?.name || c.category}
+                      {c.owaspReference || 'OWASP'} · {typeof c.category === 'object' && c.category !== null ? (c.category as any).name : (c.category || 'Web Security')}
                     </span>
                   </div>
                   <span className="text-xs font-mono font-bold text-emerald-400 whitespace-nowrap">

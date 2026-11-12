@@ -26,7 +26,7 @@ export function handleSsrfTarget(
   // Challenge 3: Link Preview (SSRF - Medium, 200 pts, CWE-918)
   // Scenario: Link preview fetcher reaches simulated internal service at 127.0.0.1:8080
   // -------------------------------------------------------------------------
-  if (slug === 'link-preview') {
+  if (slug === 'link-preview' || slug === 'basic-ssrf-loopback-service') {
     // Root discovery endpoint
     if (
       cleanPath === '/' ||
@@ -112,7 +112,7 @@ export function handleSsrfTarget(
   // Scenario: Localhost is blocklisted. Bypass filters to reach simulated cloud metadata.
   // Target: http://169.254.169.254/latest/meta-data/
   // -------------------------------------------------------------------------
-  if (slug === 'metadata-maze') {
+  if (slug === 'metadata-maze' || slug === 'ssrf-cloud-metadata-exfiltration') {
     if (
       cleanPath === '/' ||
       cleanPath === '/api' ||

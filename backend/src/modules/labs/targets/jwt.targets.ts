@@ -39,7 +39,7 @@ export function handleJwtTarget(
   // Scenario: alg:none or role claim tampering gives an admin token.
   // Real platform admin is completely protected; target uses isolated portal tokens.
   // -------------------------------------------------------------------------
-  if (slug === 'token-trouble') {
+  if (slug === 'token-trouble' || slug === 'jwt-none-algorithm-bypass') {
     // 1. Discovery / Guest Token Issuer
     if (
       cleanPath === '/' ||

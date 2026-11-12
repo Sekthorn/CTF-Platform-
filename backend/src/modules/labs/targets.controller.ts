@@ -213,7 +213,8 @@ export class TargetsController {
     if (
       categorySlug === 'idor' ||
       challenge.slug === 'invoice-vault' ||
-      challenge.slug === 'ghost-patient'
+      challenge.slug === 'ghost-patient' ||
+      challenge.slug === 'bola-order-resource-hijack'
     ) {
       return handleIdorTarget(challenge.slug, actualSubpath, req, res, rawFlag);
     }
@@ -224,7 +225,9 @@ export class TargetsController {
     if (
       categorySlug === 'ssrf' ||
       challenge.slug === 'link-preview' ||
-      challenge.slug === 'metadata-maze'
+      challenge.slug === 'metadata-maze' ||
+      challenge.slug === 'basic-ssrf-loopback-service' ||
+      challenge.slug === 'ssrf-cloud-metadata-exfiltration'
     ) {
       return handleSsrfTarget(challenge.slug, actualSubpath, req, res, rawFlag);
     }
@@ -252,7 +255,8 @@ export class TargetsController {
     if (
       categorySlug === 'jwt' ||
       challenge.slug === 'token-trouble' ||
-      challenge.slug === 'key-confusion'
+      challenge.slug === 'key-confusion' ||
+      challenge.slug === 'jwt-none-algorithm-bypass'
     ) {
       return handleJwtTarget(challenge.slug, actualSubpath, req, res, rawFlag);
     }
@@ -289,6 +293,82 @@ export class TargetsController {
         res,
         rawFlag,
       );
+    }
+
+    // -----------------------------------------------------------------------
+    // Challenge: Privilege Escalation Parameter Tampering
+    // -----------------------------------------------------------------------
+    if (challenge.slug === 'privilege-escalation-parameter-tampering') {
+      const bodyRole = (
+        req.body?.role ||
+        req.body?.user_role ||
+        req.query?.role ||
+        ''
+      ).toLowerCase();
+      const isAdminFlag =
+        req.body?.is_admin === true ||
+        req.body?.isAdmin === true ||
+        req.query?.is_admin === 'true';
+
+      if (bodyRole === 'superadmin' || bodyRole === 'admin' || isAdminFlag) {
+        return res.status(HttpStatus.OK).json({
+          success: true,
+          status: 'PRIVILEGE_ESCALATED',
+          message:
+            'Access granted: Successfully escalated privileges to superadmin via parameter tampering!',
+          user: {
+            id: 42,
+            username: 'researcher',
+            role: 'superadmin',
+            clearance: 'LEVEL_5',
+          },
+          flag: rawFlag,
+        });
+      }
+
+      return res.status(HttpStatus.OK).json({
+        service: 'Apex User Profile & Role Administration',
+        currentRole: 'operator',
+        message:
+          'Standard profile loaded. Administrative access requires superadmin privileges.',
+        endpoints: ['POST /api/user/role', 'POST /api/profile'],
+        hint: 'Inspect user role parameters and attempt parameter tampering to claim elevated privileges.',
+      });
+    }
+
+    // -----------------------------------------------------------------------
+    // Challenge: Mass Assignment Privilege Escalation
+    // -----------------------------------------------------------------------
+    if (challenge.slug === 'mass-assignment-privilege-escalation') {
+      const hasAdminField =
+        req.body?.is_admin === true ||
+        req.body?.isAdmin === true ||
+        (typeof req.body?.role === 'string' &&
+          req.body.role.toLowerCase() === 'admin');
+
+      if (hasAdminField) {
+        return res.status(HttpStatus.OK).json({
+          success: true,
+          status: 'MASS_ASSIGNMENT_VULNERABILITY_CONFIRMED',
+          message:
+            'Profile updated with unauthorized administrative attributes: is_admin=true!',
+          user: {
+            id: 105,
+            username: req.body?.username || 'researcher',
+            is_admin: true,
+            role: 'admin',
+          },
+          flag: rawFlag,
+        });
+      }
+
+      return res.status(HttpStatus.OK).json({
+        service: 'Apex User Profile Management API',
+        message: 'Submit user profile JSON to update attributes.',
+        allowedFieldsExpected: ['username', 'email', 'bio'],
+        endpoints: ['PUT /api/user/update', 'PATCH /api/v1/users/profile'],
+        hint: 'The backend blindly binds all received JSON properties into the database model without a whitelist.',
+      });
     }
 
     // -----------------------------------------------------------------------
@@ -432,6 +512,15 @@ export class TargetsController {
             flag: rawFlag,
           });
         }
+        if (challenge.slug === 'username-enumeration') {
+          return res.status(HttpStatus.OK).json({
+            vulnerability: 'Username Enumeration Confirmed',
+            differentialResponse: 'Incorrect password for user',
+            message: `Differential response confirmed: '${lowerUser}' is a valid user!`,
+            flag: rawFlag,
+            hint: `Account '${lowerUser}' exists. Use credentials '${lowerUser}:admin2026' or submit this flag token.`,
+          });
+        }
         return res.status(HttpStatus.UNAUTHORIZED).json({
           error: 'Incorrect password for user',
           message: `Authentication failed for ${lowerUser} account`,
@@ -485,6 +574,97 @@ export class TargetsController {
         id: Number(id) || 105,
         username: 'target_guest',
         role: 'Standard',
+      });
+    }
+
+    // Challenge: Password Reset Token Flaw
+    if (
+      actualSubpath.startsWith('/api/reset') ||
+      actualSubpath.startsWith('/api/auth/reset') ||
+      challenge.slug === 'password-reset-token-flaw'
+    ) {
+      const body = req.body || {};
+      const token = (body.token || req.query.token || '').toString();
+      const resetUser = (body.username || req.query.username || 'admin').toString();
+      if (token === 'admin_token_2026' || token.includes('admin') || token.includes('2026') || token.length > 5) {
+        return res.status(HttpStatus.OK).json({
+          success: true,
+          message: `Password reset token accepted for user ${resetUser}. Account recovered.`,
+          newCredentials: { username: resetUser, tempPassword: 'AdminReset2026!' },
+          flag: rawFlag,
+        });
+      }
+      return res.status(HttpStatus.OK).json({
+        endpoint: '/api/reset',
+        usage: 'POST { "username": "admin", "token": "admin_token_2026" }',
+        hint: 'Reset tokens are predictable: admin_token_2026',
+      });
+    }
+
+    // Challenge: Missing Role Authorization Check
+    if (
+      (challenge.slug === 'missing-role-authorization-check' &&
+        (actualSubpath.startsWith('/admin') ||
+          actualSubpath.startsWith('/api/admin') ||
+          !actualSubpath ||
+          actualSubpath === '/')) ||
+      actualSubpath.startsWith('/api/admin/metrics') ||
+      actualSubpath.startsWith('/admin/dashboard')
+    ) {
+      return res.status(HttpStatus.OK).json({
+        system: 'Apex Platform Internal Metrics & Telemetry',
+        roleCheckEnforced: false,
+        vulnerability: 'Missing Role Authorization Check on Admin API',
+        adminMetrics: {
+          activeServers: 42,
+          securityLevel: 'ELEVATED',
+          systemFlag: rawFlag,
+        },
+        flag: rawFlag,
+      });
+    }
+
+    // Challenge: Session Fixation Vulnerability
+    if (
+      actualSubpath.startsWith('/api/auth/session') ||
+      actualSubpath.startsWith('/api/session') ||
+      challenge.slug === 'session-fixation-vulnerability'
+    ) {
+      const sessionId = (req.headers['x-session-id'] || req.query.session_id || req.body?.session_id || '').toString();
+      if (sessionId || req.headers.cookie?.includes('session_id')) {
+        return res.status(HttpStatus.OK).json({
+          success: true,
+          vulnerability: 'SESSION_FIXATION_SUCCESS',
+          authenticatedSessionId: sessionId || 'attacker_fixed_session_2026',
+          message: 'Session authenticated without regenerating session identifier.',
+          flag: rawFlag,
+        });
+      }
+      return res.status(HttpStatus.OK).json({
+        endpoint: '/api/auth/session',
+        usage: 'POST /api/auth/session with body { "session_id": "attacker_session_1337" }',
+      });
+    }
+
+    // Challenge: MFA Response Manipulation Bypass
+    if (
+      actualSubpath.startsWith('/api/auth/mfa') ||
+      actualSubpath.startsWith('/api/mfa') ||
+      challenge.slug === 'mfa-response-manipulation-bypass'
+    ) {
+      const body = req.body || {};
+      if (body.status === 'SUCCESS' || body.success === true || body.mfaPassed === true || req.headers['x-mfa-bypass'] === 'true') {
+        return res.status(HttpStatus.OK).json({
+          success: true,
+          status: 'MFA_VERIFIED_BYPASS',
+          message: 'Client-side response manipulation verified. 2FA requirement bypassed.',
+          flag: rawFlag,
+        });
+      }
+      return res.status(HttpStatus.OK).json({
+        endpoint: '/api/auth/mfa/verify',
+        usage: 'POST { "code": "000000", "status": "SUCCESS" }',
+        hint: 'Intercept client response and manipulate validation status.',
       });
     }
 
@@ -733,6 +913,108 @@ export class TargetsController {
           role: 'standard_user',
           updatedAt: new Date().toISOString(),
         },
+      });
+    }
+
+    // Challenge: Excessive Data Exposure
+    if (
+      actualSubpath.startsWith('/api/v1/users/export') ||
+      actualSubpath.startsWith('/api/v1/users') ||
+      challenge.slug === 'excessive-data-exposure-api'
+    ) {
+      return res.status(HttpStatus.OK).json({
+        users: [
+          {
+            id: 1,
+            username: 'superadmin',
+            email: 'admin@apex-corp.internal',
+            role: 'GlobalAdministrator',
+            passwordHash: '$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$dGVzdGhhc2g',
+            mfaSecret: 'JBSWY3DPEHPK3PXP',
+            internalSecretToken: rawFlag,
+            flag: rawFlag,
+          },
+        ],
+      });
+    }
+
+    // Challenge: BOPLA Property Tampering
+    if (
+      actualSubpath.startsWith('/api/v1/employee') ||
+      challenge.slug === 'bopla-property-tampering'
+    ) {
+      const body = req.body || {};
+      if (body.salary || body.compensation || body.role === 'executive') {
+        return res.status(HttpStatus.OK).json({
+          success: true,
+          message: 'BOPLA Property Tampering Succeeded. Sensitive property modified without authorization.',
+          updatedRecord: { id: 104, salary: body.salary || 999999, role: body.role || 'executive' },
+          flag: rawFlag,
+        });
+      }
+      return res.status(HttpStatus.OK).json({
+        endpoint: '/api/v1/employee/profile',
+        usage: 'PUT with body { "salary": 999999, "role": "executive" }',
+      });
+    }
+
+    // Challenge: Jinja2 SSTI
+    if (
+      actualSubpath.startsWith('/api/render') ||
+      actualSubpath.startsWith('/template') ||
+      challenge.slug === 'jinja2-ssti-secret-leak'
+    ) {
+      const query = String(req.query.q || req.query.template || req.body?.template || '');
+      if (query.includes('{{') || query.includes('{%') || query.includes('config') || query.includes('7*7')) {
+        return res.status(HttpStatus.OK).json({
+          renderedTemplate: `Template evaluation result for: ${query}`,
+          evaluatedValue: `Secret Environment Config: ${rawFlag}`,
+          flag: rawFlag,
+        });
+      }
+      return res.status(HttpStatus.OK).json({
+        endpoint: '/template?template={{config.SECRET_KEY}}',
+        usage: 'GET with Jinja2 expression',
+      });
+    }
+
+    // Challenge: Rate Limit Bypass Header Spoof
+    if (challenge.slug === 'rate-limit-bypass-header-spoof') {
+      const xff = req.headers['x-forwarded-for'] || req.headers['x-real-ip'];
+      if (xff) {
+        return res.status(HttpStatus.OK).json({
+          success: true,
+          rateLimitBucket: `Spoofed Client IP: ${xff}`,
+          message: 'Rate limit bypassed using IP rotation header. Brute force authentication accepted.',
+          flag: rawFlag,
+        });
+      }
+      return res.status(HttpStatus.TOO_MANY_REQUESTS).json({
+        error: 'Too Many Requests',
+        message: 'Rate limit exceeded for client IP. Rotate your client IP via X-Forwarded-For header.',
+      });
+    }
+
+    // Challenge: Multi-Stage API Exploitation Chain
+    if (
+      actualSubpath.startsWith('/api/v1/chain') ||
+      challenge.slug === 'multi-stage-api-exploitation-chain'
+    ) {
+      const step = req.headers['x-chain-step'] || req.query.step || req.body?.step || '1';
+      if (String(step) === '2' || actualSubpath.includes('final') || actualSubpath.includes('step2')) {
+        return res.status(HttpStatus.OK).json({
+          chainState: 'COMPLETED',
+          stagesPassed: [
+            'Stage 1: Token Leaked from /api/v1/debug',
+            'Stage 2: Privileged Gateway Route Invocation',
+          ],
+          flag: rawFlag,
+        });
+      }
+      return res.status(HttpStatus.OK).json({
+        chainState: 'STAGE_1_ACCEPTED',
+        nextStep: 'Pass header X-Chain-Step: 2 or query ?step=2 to execute final exploit payload.',
+        flag: rawFlag,
       });
     }
 
