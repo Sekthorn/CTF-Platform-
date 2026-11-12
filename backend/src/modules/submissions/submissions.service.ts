@@ -150,26 +150,30 @@ export class SubmissionsService {
     }
 
     // Also link player's LabInstance if one exists in the database
-    const userLab = await this.prisma.labInstance.findUnique({
-      where: {
-        userId_challengeId: {
-          userId,
-          challengeId: trueChallengeId,
+    try {
+      const userLab = await this.prisma.labInstance.findUnique({
+        where: {
+          userId_challengeId: {
+            userId,
+            challengeId: trueChallengeId,
+          },
         },
-      },
-      include: {
-        flag: true,
-      },
-    });
+        include: {
+          flag: true,
+        },
+      });
 
-    if (userLab) {
-      matchedInstanceId = userLab.id;
-      if (
-        userLab.flag?.flagHash === submittedHash ||
-        userLab.flag?.flagHash === lowerSubmittedHash
-      ) {
-        isMatch = true;
+      if (userLab) {
+        matchedInstanceId = userLab.id;
+        if (
+          userLab.flag?.flagHash === submittedHash ||
+          userLab.flag?.flagHash === lowerSubmittedHash
+        ) {
+          isMatch = true;
+        }
       }
+    } catch (labErr: any) {
+      this.logger.warn(`Could not query labInstance: ${labErr.message}`);
     }
 
     // Check against default user dynamic flag (when player tests target unauthenticated via Burp Suite or curl)
@@ -246,10 +250,14 @@ export class SubmissionsService {
 
           // Invalidate instance flag after correct solve
           if (matchedInstanceId) {
-            await tx.instanceFlag.updateMany({
-              where: { instanceId: matchedInstanceId },
-              data: { isUsed: true },
-            });
+            try {
+              await tx.instanceFlag.updateMany({
+                where: { instanceId: matchedInstanceId },
+                data: { isUsed: true },
+              });
+            } catch (flagErr: any) {
+              this.logger.warn(`Could not update instance flag: ${flagErr.message}`);
+            }
           }
 
           // Upsert progress

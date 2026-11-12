@@ -224,27 +224,37 @@ export class LabsService {
     effectiveSubpath?: string;
   } | null> {
     // 1. Check if identifier1 is an opaque LabInstance UUID / Token (No username in URL)
-    if (identifier1) {
-      const lab = await this.prisma.labInstance.findUnique({
-        where: { id: identifier1 },
-        include: {
-          challenge: { include: { category: true } },
-          user: { select: { id: true, username: true } },
-        },
-      });
+    const isUuid =
+      identifier1 &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        identifier1,
+      );
 
-      if (lab) {
-        const { rawFlag } = this.computePlayerChallengeFlag(
-          lab.user.id,
-          lab.challenge.slug,
-        );
-        const effectiveSubpath = identifier2 ? `/${identifier2}` : '';
-        return {
-          challenge: lab.challenge,
-          rawFlag,
-          user: lab.user,
-          effectiveSubpath,
-        };
+    if (isUuid) {
+      try {
+        const lab = await this.prisma.labInstance.findUnique({
+          where: { id: identifier1 },
+          include: {
+            challenge: { include: { category: true } },
+            user: { select: { id: true, username: true } },
+          },
+        });
+
+        if (lab) {
+          const { rawFlag } = this.computePlayerChallengeFlag(
+            lab.user.id,
+            lab.challenge.slug,
+          );
+          const effectiveSubpath = identifier2 ? `/${identifier2}` : '';
+          return {
+            challenge: lab.challenge,
+            rawFlag,
+            user: lab.user,
+            effectiveSubpath,
+          };
+        }
+      } catch (labErr: any) {
+        this.logger.warn(`Could not query lab_instances: ${labErr.message}`);
       }
     }
 
