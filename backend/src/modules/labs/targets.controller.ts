@@ -340,8 +340,8 @@ export class TargetsController {
     // -----------------------------------------------------------------------
     if (actualSubpath.startsWith('/api/login') || actualSubpath.startsWith('/login')) {
       const body = req.body || {};
-      const username = body.username || req.query.username || '';
-      const password = body.password || req.query.password || '';
+      const username = (body.username || body.identifier || req.query.username || req.query.identifier || '').toString();
+      const password = (body.password || req.query.password || '').toString();
 
       // Challenge: Weak Admin Password (admin:admin2026)
       if (

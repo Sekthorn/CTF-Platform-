@@ -21,14 +21,26 @@ export class TransformInterceptor<T> implements NestInterceptor<
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<ApiResponse<T>> {
-    const statusCode = context.switchToHttp().getResponse().statusCode;
+  ): Observable<any> {
+    const http = context.switchToHttp();
+    const req = http.getRequest();
+    const res = http.getResponse();
+
+    // Challenge target simulation endpoints should bypass the platform ApiResponse envelope
+    if (req?.url?.includes('/targets') || res?.headersSent) {
+      return next.handle();
+    }
+
+    const statusCode = res?.statusCode || 200;
     return next.handle().pipe(
-      map((data) => ({
-        success: true,
-        statusCode,
-        data,
-      })),
+      map((data) => {
+        if (res?.headersSent) return data;
+        return {
+          success: true,
+          statusCode,
+          data,
+        };
+      }),
     );
   }
 }

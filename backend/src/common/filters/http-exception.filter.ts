@@ -17,6 +17,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
+    // If response headers were already sent by raw target handlers, do not attempt to send again
+    if (response.headersSent) {
+      return;
+    }
+
     const status =
       exception instanceof HttpException
         ? exception.getStatus()
