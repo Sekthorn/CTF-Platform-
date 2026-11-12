@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { MobileDrawer } from '@/components/layout/MobileDrawer';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 export const AppLayout: React.FC = () => {
+  const location = useLocation();
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     return localStorage.getItem('websec_sidebar_collapsed') === 'true';
   });
@@ -41,7 +42,7 @@ export const AppLayout: React.FC = () => {
 
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-5 lg:px-6 lg:py-4 bg-cyber-bg">
           <div className="w-full max-w-[1720px] mx-auto space-y-4">
-            <ErrorBoundary>
+            <ErrorBoundary key={location.pathname} resetKey={location.pathname}>
               <Outlet />
             </ErrorBoundary>
           </div>

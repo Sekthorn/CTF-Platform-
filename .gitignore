@@ -56,3 +56,11 @@ desktop.ini
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Private challenge walkthroughs & solutions (Owner only)
+docs/CHALLENGE_SOLUTIONS_WALKTHROUGH.md
+docs/CHALLENGE_SOLUTIONS_WALKTHROUGH.pdf
+*SOLUTIONS*
+*solutions*
+*WALKTHROUGH*
+*walkthrough*

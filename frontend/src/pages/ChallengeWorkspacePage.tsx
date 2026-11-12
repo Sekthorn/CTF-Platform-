@@ -763,7 +763,7 @@ export const ChallengeWorkspacePage: React.FC = () => {
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-cyber-muted mt-1">
-              <span>{challenge.category}</span>
+              <span>{typeof challenge.category === 'object' && challenge.category !== null ? (challenge.category as any).name : challenge.category}</span>
               <span>•</span>
               <span className="text-emerald-400 font-bold">+{challenge.points} PTS</span>
               <span>•</span>
@@ -805,7 +805,7 @@ export const ChallengeWorkspacePage: React.FC = () => {
             <div className="pt-3 border-t border-cyber-border/60 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border/50 gap-2">
                 <span className="text-cyber-muted text-[11px] flex-shrink-0">Category:</span>
-                <span className="text-cyber-text font-medium text-right break-words">{challenge.category}</span>
+                <span className="text-cyber-text font-medium text-right break-words">{typeof challenge.category === 'object' && challenge.category !== null ? (challenge.category as any).name : challenge.category}</span>
               </div>
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-cyber-bg/50 border border-cyber-border/50 gap-2">
                 <span className="text-cyber-muted text-[11px] flex-shrink-0">Difficulty:</span>
@@ -1358,7 +1358,7 @@ export const ChallengeWorkspacePage: React.FC = () => {
               onClose={() => setShowCelebration(false)}
               challengeTitle={challenge.title}
               pointsAwarded={submissionFeedback.pointsAwarded || challenge.points}
-              category={challenge.category}
+              category={typeof challenge.category === 'object' && challenge.category !== null ? (challenge.category as any).name : challenge.category}
               unlockedLesson={submissionFeedback.unlockedLesson}
             />
           )}

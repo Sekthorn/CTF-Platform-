@@ -76,7 +76,12 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenMobileNav }) => {
       case '/profile':
         return { title: 'Researcher Profile', subtitle: 'Personal Statistics & Solve History' };
       case '/settings':
-        return { title: 'Platform Settings', subtitle: 'Preferences & Account Configurations' };
+        return {
+          title: isAdmin ? 'Platform Settings' : 'Account Settings',
+          subtitle: isAdmin
+            ? 'Preferences & System Configurations'
+            : 'Preferences & Account Configurations',
+        };
       case '/docs':
         return { title: 'Documentation', subtitle: 'Standards & Rules of Engagement' };
       default:

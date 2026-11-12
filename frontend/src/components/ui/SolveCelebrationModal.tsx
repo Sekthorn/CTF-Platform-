@@ -43,6 +43,11 @@ export const SolveCelebrationModal: React.FC<SolveCelebrationModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  const categoryLabel =
+    typeof category === 'object' && category !== null
+      ? (category as any).name
+      : category;
+
   if (!isOpen) return null;
 
   return (
@@ -88,7 +93,7 @@ export const SolveCelebrationModal: React.FC<SolveCelebrationModalProps> = ({
           <p className="text-xs sm:text-sm text-zinc-400 font-sans">
             You successfully exploited and captured the flag for{' '}
             <span className="text-emerald-300 font-semibold">{challengeTitle}</span>
-            {category ? ` (${category})` : ''}.
+            {categoryLabel ? ` (${categoryLabel})` : ''}.
           </p>
         </div>
 

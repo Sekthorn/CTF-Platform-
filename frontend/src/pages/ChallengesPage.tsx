@@ -40,7 +40,10 @@ export const ChallengesPage: React.FC = () => {
             id: item.id,
             title: item.title,
             slug: item.slug,
-            category: item.category?.name || 'Authentication & Access Control',
+            category:
+              typeof item.category === 'object' && item.category !== null
+                ? item.category.name
+                : (item.category || 'Authentication & Access Control'),
             difficulty: item.difficulty || 'Medium',
             points: item.points || 100,
             owaspReference: item.references?.[0]?.identifier || 'OWASP Top 10',
@@ -315,7 +318,7 @@ export const ChallengesPage: React.FC = () => {
                   {/* Category & Status Bar */}
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-mono uppercase tracking-wider text-cyber-muted truncate">
-                      {challenge.category}
+                      {typeof challenge.category === 'object' && challenge.category !== null ? (challenge.category as any).name : challenge.category}
                     </span>
                     <div className="flex items-center space-x-1.5 shrink-0">
                       {challenge.solved && (
@@ -407,7 +410,7 @@ export const ChallengesPage: React.FC = () => {
                     {challenge.shortDescription}
                   </p>
                   <div className="flex items-center gap-2 text-[10px] font-mono text-cyber-muted pt-0.5">
-                    <span>{challenge.category}</span>
+                    <span>{typeof challenge.category === 'object' && challenge.category !== null ? (challenge.category as any).name : challenge.category}</span>
                     <span>•</span>
                     <span>{challenge.owaspReference}</span>
                     {challenge.cweReference && (

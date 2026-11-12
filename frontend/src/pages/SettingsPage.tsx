@@ -94,7 +94,7 @@ export const SettingsPage: React.FC = () => {
           </div>
           <h1 className="text-xl md:text-2xl font-bold text-cyber-text tracking-tight flex items-center gap-2">
             <Settings className="w-5 h-5 text-emerald-400" />
-            Platform Settings
+            {isAdmin ? 'Platform Settings' : 'Account Settings'}
           </h1>
           <p className="text-xs md:text-sm text-cyber-muted mt-0.5">
             Manage your research identity, cyber persona, preferences, and account configurations.

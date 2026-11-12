@@ -112,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: 'Account',
       items: [
         { label: isAdmin ? 'Admin Profile' : 'My Profile', path: '/profile', icon: User },
-        { label: 'System Settings', path: '/settings', icon: Settings },
+        { label: isAdmin ? 'System Settings' : 'Account Settings', path: '/settings', icon: Settings },
       ],
     },
   ];

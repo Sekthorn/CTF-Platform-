@@ -59,9 +59,17 @@ export const ProfilePage: React.FC = () => {
         const items = res.data?.data?.items || res.data?.items;
         if (Array.isArray(items)) {
           setTotalChallenges(items.length);
-          const userSolved = items.filter(
-            (c: any) => c.userProgress?.status === 'SOLVED' || c.isSolved
-          );
+          const userSolved = items
+            .filter(
+              (c: any) => c.userProgress?.status === 'SOLVED' || c.isSolved
+            )
+            .map((c: any) => ({
+              ...c,
+              categoryName:
+                typeof c.category === 'object' && c.category !== null
+                  ? c.category.name
+                  : (c.category || 'Web Security'),
+            }));
           setSolvedChallenges(userSolved);
         }
       })
@@ -235,7 +243,7 @@ export const ProfilePage: React.FC = () => {
                     <DifficultyBadge difficulty={challenge.difficulty} />
                   </div>
                   <p className="text-cyber-muted text-[11px]">
-                    {challenge.category} · {challenge.owaspReference}
+                    {challenge.categoryName || (typeof challenge.category === 'object' && challenge.category !== null ? challenge.category.name : challenge.category) || 'Web Security'} · {challenge.owaspReference || 'OWASP'}
                   </p>
                 </div>
 
