@@ -270,6 +270,7 @@ Use safe, controlled test data. Do not use real personal information.
 - Do not revert unrelated user changes.
 
 ## 12. Communication Rules
+- Always communicate and respond in English at all times, regardless of system locale, user location, or timezone.
 The project owner prefers:
 - Simple explanations.
 - Step-by-step guidance.
