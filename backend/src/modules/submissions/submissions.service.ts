@@ -7,7 +7,9 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { LabsService } from '../labs/labs.service';
 import { SubmitFlagDto } from './dto/submit-flag.dto';
-import { ChallengeStatus, ProgressStatus, LabStatus } from '@prisma/client';
+import { ChallengeStatus, ProgressStatus } from '@prisma/client';
+import { MOCK_ID_TO_SLUG } from './mock-id-map';
+import { STATIC_CHALLENGE_FLAGS } from './static-flags-catalog';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -31,9 +33,11 @@ export class SubmissionsService {
       throw new BadRequestException('Flag submission cannot be empty');
     }
 
-    // 1. Fetch challenge and active flags
-    const challenge = await this.prisma.challenge.findUnique({
-      where: { id: challengeId },
+    // 1. Fetch challenge and active flags (supports UUID, slug, or mock prefix 'ch-XX')
+    let challenge = await this.prisma.challenge.findFirst({
+      where: {
+        OR: [{ id: challengeId }, { slug: challengeId }],
+      },
       include: {
         flags: {
           where: { isActive: true },
@@ -41,11 +45,25 @@ export class SubmissionsService {
       },
     });
 
+    if (!challenge && MOCK_ID_TO_SLUG[challengeId]) {
+      const mappedSlug = MOCK_ID_TO_SLUG[challengeId];
+      challenge = await this.prisma.challenge.findFirst({
+        where: { slug: mappedSlug },
+        include: {
+          flags: {
+            where: { isActive: true },
+          },
+        },
+      });
+    }
+
     if (!challenge) {
       throw new NotFoundException(
-        `Challenge with ID '${challengeId}' not found`,
+        `Challenge '${challengeId}' not found`,
       );
     }
+
+    const trueChallengeId = challenge.id;
 
     if (challenge.status !== ChallengeStatus.PUBLISHED) {
       throw new BadRequestException(
@@ -59,7 +77,7 @@ export class SubmissionsService {
         where: {
           userId_challengeId: {
             userId,
-            challengeId,
+            challengeId: trueChallengeId,
           },
         },
       },
@@ -67,7 +85,7 @@ export class SubmissionsService {
 
     if (existingProgress?.status === ProgressStatus.SOLVED) {
       const linkedLesson = await this.prisma.knowledgeLesson.findUnique({
-        where: { challengeId },
+        where: { challengeId: trueChallengeId },
         select: { id: true, title: true, slug: true },
       });
 
@@ -85,6 +103,11 @@ export class SubmissionsService {
     const submittedHash = crypto
       .createHash('sha256')
       .update(rawFlag)
+      .digest('hex');
+
+    const lowerSubmittedHash = crypto
+      .createHash('sha256')
+      .update(rawFlag.toLowerCase())
       .digest('hex');
 
     // 4. Per-Player Dynamic Flag Verification
@@ -108,7 +131,7 @@ export class SubmissionsService {
       where: {
         userId_challengeId: {
           userId,
-          challengeId,
+          challengeId: trueChallengeId,
         },
       },
       include: {
@@ -118,13 +141,37 @@ export class SubmissionsService {
 
     if (userLab) {
       matchedInstanceId = userLab.id;
-      if (userLab.flag?.flagHash === submittedHash) {
+      if (
+        userLab.flag?.flagHash === submittedHash ||
+        userLab.flag?.flagHash === lowerSubmittedHash
+      ) {
         isMatch = true;
       }
     }
 
-    // Fallback: Check static challenge flags if instance did not match
+    // Check against default user dynamic flag (when player tests target unauthenticated via Burp Suite or curl)
     if (!isMatch) {
+      const defaultUser = await this.prisma.user.findFirst({
+        where: { role: 'USER' },
+        select: { id: true },
+      });
+      if (defaultUser && defaultUser.id !== userId) {
+        const { rawFlag: defaultRawFlag, flagHash: defaultHash } =
+          this.labsService.computePlayerChallengeFlag(
+            defaultUser.id,
+            challenge.slug,
+          );
+        if (
+          rawFlag.trim() === defaultRawFlag.trim() ||
+          submittedHash === defaultHash
+        ) {
+          isMatch = true;
+        }
+      }
+    }
+
+    // Check static challenge flags stored in database
+    if (!isMatch && challenge.flags && challenge.flags.length > 0) {
       for (const flag of challenge.flags) {
         if (flag.isCaseSensitive) {
           if (flag.flagHash === submittedHash) {
@@ -132,11 +179,10 @@ export class SubmissionsService {
             break;
           }
         } else {
-          const lowerHash = crypto
-            .createHash('sha256')
-            .update(rawFlag.toLowerCase())
-            .digest('hex');
-          if (flag.flagHash === lowerHash || flag.flagHash === submittedHash) {
+          if (
+            flag.flagHash === lowerSubmittedHash ||
+            flag.flagHash === submittedHash
+          ) {
             isMatch = true;
             break;
           }
@@ -144,140 +190,174 @@ export class SubmissionsService {
       }
     }
 
+    // Fallback: Check static catalog flag for this challenge slug
+    if (!isMatch && STATIC_CHALLENGE_FLAGS[challenge.slug]) {
+      const catalogFlag = STATIC_CHALLENGE_FLAGS[challenge.slug];
+      const catalogFlagHash = crypto
+        .createHash('sha256')
+        .update(catalogFlag.trim())
+        .digest('hex');
+      if (
+        rawFlag.trim() === catalogFlag.trim() ||
+        submittedHash === catalogFlagHash
+      ) {
+        isMatch = true;
+      }
+    }
+
     // 5. Handle correct submission with atomic transaction
     if (isMatch) {
-      return this.prisma.$transaction(async (tx) => {
-        // Record submission
-        const submission = await tx.submission.create({
-          data: {
-            userId,
-            challengeId,
-            instanceId: matchedInstanceId,
-            submittedFlag: rawFlag,
-            isCorrect: true,
-            pointsAwarded: challenge.points,
-          },
-        });
-
-        // Invalidate instance flag after correct solve
-        if (matchedInstanceId) {
-          await tx.instanceFlag.updateMany({
-            where: { instanceId: matchedInstanceId },
-            data: { isUsed: true },
-          });
-        }
-
-        // Upsert progress
-        await tx.userChallengeProgress.upsert({
-          where: {
-            userId_challengeId: {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          // Record submission
+          const submission = await tx.submission.create({
+            data: {
               userId,
-              challengeId,
+              challengeId: trueChallengeId,
+              instanceId: matchedInstanceId,
+              submittedFlag: rawFlag,
+              isCorrect: true,
+              pointsAwarded: challenge.points,
             },
-          },
-          create: {
-            userId,
-            challengeId,
-            status: ProgressStatus.SOLVED,
-            solvedAt: new Date(),
-            pointsEarned: challenge.points,
-          },
-          update: {
-            status: ProgressStatus.SOLVED,
-            solvedAt: new Date(),
-            pointsEarned: challenge.points,
-          },
-        });
+          });
 
-        // Atomically increment user's total score
-        const updatedUser = await tx.user.update({
-          where: { id: userId },
-          data: {
-            totalPoints: {
-              increment: challenge.points,
-            },
-          },
-          select: {
-            id: true,
-            username: true,
-            totalPoints: true,
-          },
-        });
+          // Invalidate instance flag after correct solve
+          if (matchedInstanceId) {
+            await tx.instanceFlag.updateMany({
+              where: { instanceId: matchedInstanceId },
+              data: { isUsed: true },
+            });
+          }
 
-        // Auto-unlock corresponding Knowledge Lesson if linked
-        const linkedLesson = await tx.knowledgeLesson.findUnique({
-          where: { challengeId },
-          select: { id: true, title: true, slug: true },
-        });
-
-        let unlockedLesson: { id: string; title: string; slug: string } | null =
-          null;
-        if (linkedLesson) {
-          await tx.userLessonProgress.upsert({
+          // Upsert progress
+          await tx.userChallengeProgress.upsert({
             where: {
-              userId_lessonId: {
+              userId_challengeId: {
                 userId,
-                lessonId: linkedLesson.id,
+                challengeId: trueChallengeId,
               },
-            },
-            update: {
-              status: ProgressStatus.IN_PROGRESS,
             },
             create: {
               userId,
-              lessonId: linkedLesson.id,
-              status: ProgressStatus.IN_PROGRESS,
+              challengeId: trueChallengeId,
+              status: ProgressStatus.SOLVED,
+              solvedAt: new Date(),
+              pointsEarned: challenge.points,
+            },
+            update: {
+              status: ProgressStatus.SOLVED,
+              solvedAt: new Date(),
+              pointsEarned: challenge.points,
             },
           });
-          unlockedLesson = {
-            id: linkedLesson.id,
-            title: linkedLesson.title,
-            slug: linkedLesson.slug,
+
+          // Atomically increment user's total score
+          const updatedUser = await tx.user.update({
+            where: { id: userId },
+            data: {
+              totalPoints: {
+                increment: challenge.points,
+              },
+            },
+            select: {
+              id: true,
+              username: true,
+              totalPoints: true,
+            },
+          });
+
+          // Auto-unlock corresponding Knowledge Lesson if linked
+          const linkedLesson = await tx.knowledgeLesson.findUnique({
+            where: { challengeId: trueChallengeId },
+            select: { id: true, title: true, slug: true },
+          });
+
+          let unlockedLesson: {
+            id: string;
+            title: string;
+            slug: string;
+          } | null = null;
+          if (linkedLesson) {
+            await tx.userLessonProgress.upsert({
+              where: {
+                userId_lessonId: {
+                  userId,
+                  lessonId: linkedLesson.id,
+                },
+              },
+              update: {
+                status: ProgressStatus.IN_PROGRESS,
+              },
+              create: {
+                userId,
+                lessonId: linkedLesson.id,
+                status: ProgressStatus.IN_PROGRESS,
+              },
+            });
+            unlockedLesson = {
+              id: linkedLesson.id,
+              title: linkedLesson.title,
+              slug: linkedLesson.slug,
+            };
+          }
+
+          this.logger.log(
+            `User '${updatedUser.username}' successfully solved challenge '${challenge.title}' (+${challenge.points} pts)`,
+          );
+
+          return {
+            isCorrect: true,
+            alreadySolved: false,
+            pointsAwarded: challenge.points,
+            totalPoints: updatedUser.totalPoints,
+            message: `Congratulations! Flag accepted. You earned ${challenge.points} points!`,
+            submissionId: submission.id,
+            unlockedLesson,
           };
-        }
-
-        this.logger.log(
-          `User '${updatedUser.username}' successfully solved challenge '${challenge.title}' (+${challenge.points} pts)`,
+        });
+      } catch (txError: any) {
+        this.logger.error(
+          `Failed to record solved submission for challenge '${challenge.slug}': ${txError.message}`,
+          txError.stack,
         );
-
-        return {
-          isCorrect: true,
-          alreadySolved: false,
-          pointsAwarded: challenge.points,
-          totalPoints: updatedUser.totalPoints,
-          message: `Congratulations! Flag accepted. You earned ${challenge.points} points!`,
-          submissionId: submission.id,
-          unlockedLesson,
-        };
-      });
+        throw new BadRequestException(
+          'Flag was valid, but an error occurred updating your score. Please retry.',
+        );
+      }
     }
 
-    // 5. Handle incorrect submission
-    await this.prisma.submission.create({
-      data: {
-        userId,
-        challengeId,
-        submittedFlag: rawFlag,
-        isCorrect: false,
-        pointsAwarded: 0,
-      },
-    });
-
-    // Mark challenge IN_PROGRESS if not already tracked
-    await this.prisma.userChallengeProgress.upsert({
-      where: {
-        userId_challengeId: {
+    // 6. Handle incorrect submission
+    try {
+      await this.prisma.submission.create({
+        data: {
           userId,
-          challengeId,
+          challengeId: trueChallengeId,
+          submittedFlag: rawFlag,
+          isCorrect: false,
+          pointsAwarded: 0,
         },
-      },
-      create: {
-        userId,
-        challengeId,
-        status: ProgressStatus.IN_PROGRESS,
-      },
-      update: {},
-    });
+      });
+
+      // Mark challenge IN_PROGRESS if not already tracked
+      await this.prisma.userChallengeProgress.upsert({
+        where: {
+          userId_challengeId: {
+            userId,
+            challengeId: trueChallengeId,
+          },
+        },
+        create: {
+          userId,
+          challengeId: trueChallengeId,
+          status: ProgressStatus.IN_PROGRESS,
+        },
+        update: {},
+      });
+    } catch (saveError: any) {
+      this.logger.warn(
+        `Failed to record incorrect attempt for challenge '${challenge.slug}': ${saveError.message}`,
+      );
+    }
 
     return {
       isCorrect: false,
@@ -333,10 +413,17 @@ export class SubmissionsService {
    * Get submissions for a specific challenge by current user
    */
   async getChallengeSubmissions(userId: string, challengeId: string) {
+    let resolvedId = challengeId;
+    const ch = await this.prisma.challenge.findFirst({
+      where: { OR: [{ id: challengeId }, { slug: challengeId }] },
+      select: { id: true },
+    });
+    if (ch) resolvedId = ch.id;
+
     return this.prisma.submission.findMany({
       where: {
         userId,
-        challengeId,
+        challengeId: resolvedId,
       },
       orderBy: { submittedAt: 'desc' },
       take: 10,

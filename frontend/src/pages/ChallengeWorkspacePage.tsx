@@ -632,7 +632,13 @@ export const ChallengeWorkspacePage: React.FC = () => {
     setSubmissionFeedback({ status: null, message: '' });
 
     try {
-      const res = await apiClient.post(`/challenges/${challenge.id}/submit`, {
+      // Ensure we submit using a valid backend identifier (real UUID or slug, never mock ID like 'ch-01')
+      const challengeIdentifier =
+        challenge.id && !challenge.id.startsWith('ch-')
+          ? challenge.id
+          : (challenge.slug || slug || challenge.id);
+
+      const res = await apiClient.post(`/challenges/${challengeIdentifier}/submit`, {
         flag: cleanFlag,
       });
 
@@ -1219,12 +1225,12 @@ export const ChallengeWorkspacePage: React.FC = () => {
             )}
 
             {submissionFeedback.status === 'incorrect' && (
-              <div className="p-3 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-xs font-mono space-y-1 animate-in shake duration-200">
+              <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs font-mono space-y-1.5 animate-in shake duration-200 shadow-md">
                 <div className="flex items-center gap-1.5 font-bold">
-                  <AlertCircle className="w-4 h-4 text-rose-400" />
-                  <span>Incorrect Flag</span>
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>Flag Verification Notice</span>
                 </div>
-                <p className="text-[11px] text-rose-300/90 font-sans">
+                <p className="text-xs text-rose-200/90 font-sans leading-relaxed">
                   {submissionFeedback.message}
                 </p>
               </div>
@@ -1238,17 +1244,19 @@ export const ChallengeWorkspacePage: React.FC = () => {
             </h4>
 
             {submissionsLog.length > 0 ? (
-              <div className="space-y-2 divide-y divide-cyber-border/40 text-[11px] font-mono">
+              <div className="space-y-2.5 divide-y divide-cyber-border/40 text-xs font-mono">
                 {submissionsLog.map((attempt, index) => (
                   <div
                     key={index}
-                    className="pt-2 first:pt-0 flex items-center justify-between text-xs"
+                    className="pt-2.5 first:pt-0 flex items-start justify-between gap-3 text-xs"
                   >
-                    <span className="truncate max-w-[170px] text-cyber-muted font-mono">
-                      {attempt.flag}
-                    </span>
+                    <div className="flex-1 min-w-0 pr-2">
+                      <span className="break-all select-all text-xs font-mono text-cyber-text font-medium leading-relaxed block bg-zinc-950/70 px-2.5 py-1.5 rounded-md border border-cyber-border/60">
+                        {attempt.flag}
+                      </span>
+                    </div>
                     <span
-                      className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                      className={`font-bold px-2.5 py-1 rounded text-[10px] shrink-0 font-mono tracking-wider ${
                         attempt.isCorrect
                           ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/60'
                           : 'bg-rose-950/80 text-rose-400 border border-rose-800/60'
