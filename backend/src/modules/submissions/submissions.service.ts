@@ -237,16 +237,29 @@ export class SubmissionsService {
       try {
         return await this.prisma.$transaction(async (tx) => {
           // Record submission
-          const submission = await tx.submission.create({
-            data: {
-              userId,
-              challengeId: trueChallengeId,
-              instanceId: matchedInstanceId,
-              submittedFlag: rawFlag,
-              isCorrect: true,
-              pointsAwarded: challenge.points,
-            },
-          });
+          let submission: any;
+          try {
+            submission = await tx.submission.create({
+              data: {
+                userId,
+                challengeId: trueChallengeId,
+                ...(matchedInstanceId ? { instanceId: matchedInstanceId } : {}),
+                submittedFlag: rawFlag,
+                isCorrect: true,
+                pointsAwarded: challenge.points,
+              },
+            });
+          } catch (createErr) {
+            submission = await tx.submission.create({
+              data: {
+                userId,
+                challengeId: trueChallengeId,
+                submittedFlag: rawFlag,
+                isCorrect: true,
+                pointsAwarded: challenge.points,
+              },
+            });
+          }
 
           // Invalidate instance flag after correct solve
           if (matchedInstanceId) {
@@ -298,38 +311,43 @@ export class SubmissionsService {
           });
 
           // Auto-unlock corresponding Knowledge Lesson if linked
-          const linkedLesson = await tx.knowledgeLesson.findUnique({
-            where: { challengeId: trueChallengeId },
-            select: { id: true, title: true, slug: true },
-          });
-
           let unlockedLesson: {
             id: string;
             title: string;
             slug: string;
           } | null = null;
-          if (linkedLesson) {
-            await tx.userLessonProgress.upsert({
-              where: {
-                userId_lessonId: {
+
+          try {
+            const linkedLesson = await tx.knowledgeLesson.findUnique({
+              where: { challengeId: trueChallengeId },
+              select: { id: true, title: true, slug: true },
+            });
+
+            if (linkedLesson) {
+              await tx.userLessonProgress.upsert({
+                where: {
+                  userId_lessonId: {
+                    userId,
+                    lessonId: linkedLesson.id,
+                  },
+                },
+                update: {
+                  status: ProgressStatus.IN_PROGRESS,
+                },
+                create: {
                   userId,
                   lessonId: linkedLesson.id,
+                  status: ProgressStatus.IN_PROGRESS,
                 },
-              },
-              update: {
-                status: ProgressStatus.IN_PROGRESS,
-              },
-              create: {
-                userId,
-                lessonId: linkedLesson.id,
-                status: ProgressStatus.IN_PROGRESS,
-              },
-            });
-            unlockedLesson = {
-              id: linkedLesson.id,
-              title: linkedLesson.title,
-              slug: linkedLesson.slug,
-            };
+              });
+              unlockedLesson = {
+                id: linkedLesson.id,
+                title: linkedLesson.title,
+                slug: linkedLesson.slug,
+              };
+            }
+          } catch (lessonErr: any) {
+            this.logger.warn(`Could not auto-unlock lesson: ${lessonErr.message}`);
           }
 
           this.logger.log(
@@ -352,7 +370,7 @@ export class SubmissionsService {
           txError.stack,
         );
         throw new BadRequestException(
-          'Flag was valid, but an error occurred updating your score. Please retry.',
+          `Flag was valid, but an error occurred updating your score (${txError.message}). Please retry.`,
         );
       }
     }
