@@ -25,6 +25,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DifficultyBadge } from '@/components/ui/DifficultyBadge';
+import { ConfettiCelebration } from '@/components/ui/ConfettiCelebration';
+import { SolveCelebrationModal } from '@/components/ui/SolveCelebrationModal';
 import { apiClient } from '@/services/api';
 import { labService } from '@/services/lab.service';
 import { mockChallenges } from '@/data/mock/challenges';
@@ -70,6 +72,7 @@ export const ChallengeWorkspacePage: React.FC = () => {
     pointsAwarded?: number;
     unlockedLesson?: { id: string; title: string; slug: string } | null;
   }>({ status: null, message: '' });
+  const [showCelebration, setShowCelebration] = useState<boolean>(false);
 
   // Rate Limiting & Cooldown State (Max 5 attempts / 60 seconds)
   const [recentAttempts, setRecentAttempts] = useState<number[]>([]);
@@ -660,6 +663,8 @@ export const ChallengeWorkspacePage: React.FC = () => {
           });
           // Update challenge solved state
           setChallenge((prev) => (prev ? { ...prev, solved: true } : null));
+          // Trigger celebratory animation and modal
+          setShowCelebration(true);
         }
       } else {
         setSubmissionFeedback({
@@ -1130,14 +1135,26 @@ export const ChallengeWorkspacePage: React.FC = () => {
           </div>
 
           {/* 2. Capture the Flag Card */}
-          <div className="rounded-xl border border-cyber-border bg-cyber-card p-5 space-y-4 shadow-sm">
+          <div
+            className={`rounded-xl border p-5 space-y-4 shadow-sm transition-all duration-500 ${
+              challenge.solved
+                ? 'border-emerald-500/50 bg-gradient-to-br from-cyber-card to-emerald-950/25 shadow-[0_0_25px_rgba(34,197,94,0.18)]'
+                : 'border-cyber-border bg-cyber-card'
+            }`}
+          >
             <div>
               <h3 className="text-xs font-bold text-cyber-text uppercase tracking-wider font-mono flex items-center gap-2">
-                <Send className="w-3.5 h-3.5 text-emerald-400" />
+                {challenge.solved ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                ) : (
+                  <Send className="w-3.5 h-3.5 text-emerald-400" />
+                )}
                 Capture The Flag
               </h3>
               <p className="text-[11px] text-cyber-muted mt-1 font-sans">
-                Enter the exact flag discovered inside your target environment.
+                {challenge.solved
+                  ? 'Challenge completed! Your flag token has been verified and registered.'
+                  : 'Enter the exact flag discovered inside your target environment.'}
               </p>
             </div>
 
@@ -1149,9 +1166,11 @@ export const ChallengeWorkspacePage: React.FC = () => {
                 <Input
                   value={flagInput}
                   onChange={(e) => setFlagInput(e.target.value)}
-                  placeholder="WEBSEC{challenge_flag_...}"
+                  placeholder={challenge.solved ? "Challenge already solved" : "WEBSEC{challenge_flag_...}"}
                   disabled={submitting || challenge.solved || cooldownSeconds > 0}
-                  className="h-10 text-xs font-mono bg-cyber-bg border-cyber-border text-cyber-text placeholder:text-cyber-muted/40 focus:border-emerald-500"
+                  className={`h-10 text-xs font-mono bg-cyber-bg border-cyber-border text-cyber-text placeholder:text-cyber-muted/40 transition-colors ${
+                    challenge.solved ? 'border-emerald-500/40 text-emerald-300 bg-emerald-950/20' : 'focus:border-emerald-500'
+                  }`}
                 />
               </div>
 
@@ -1163,7 +1182,11 @@ export const ChallengeWorkspacePage: React.FC = () => {
                   challenge.solved ||
                   cooldownSeconds > 0
                 }
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs h-9 shadow-md shadow-emerald-950/40 transition-colors"
+                className={`w-full font-mono text-xs h-9 shadow-md transition-all duration-300 ${
+                  challenge.solved
+                    ? 'bg-emerald-700/80 hover:bg-emerald-700 text-emerald-100 shadow-emerald-950/40 cursor-default'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40'
+                }`}
               >
                 {submitting ? (
                   <span className="flex items-center gap-1.5">
@@ -1171,8 +1194,8 @@ export const ChallengeWorkspacePage: React.FC = () => {
                     Validating Flag...
                   </span>
                 ) : challenge.solved ? (
-                  <span className="flex items-center gap-1.5 text-emerald-200">
-                    <CheckCircle2 className="w-4 h-4" /> Already Solved
+                  <span className="flex items-center gap-1.5 text-emerald-200 font-bold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-300" /> Solved (+{challenge.points} pts)
                   </span>
                 ) : cooldownSeconds > 0 ? (
                   <span className="flex items-center gap-1.5 text-amber-200">
@@ -1201,10 +1224,18 @@ export const ChallengeWorkspacePage: React.FC = () => {
 
             {/* Submission Alerts */}
             {submissionFeedback.status === 'success' && (
-              <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-950/80 to-zinc-900 border border-emerald-500/50 text-emerald-300 text-xs font-mono space-y-2 animate-in fade-in duration-200">
-                <div className="flex items-center gap-2 font-bold text-emerald-400 text-sm">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  <span>Flag Accepted! (+{submissionFeedback.pointsAwarded} pts)</span>
+              <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-950/80 to-zinc-900 border border-emerald-500/50 text-emerald-300 text-xs font-mono space-y-2 animate-in fade-in zoom-in-95 duration-300 shadow-[0_0_20px_rgba(34,197,94,0.18)]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold text-emerald-400 text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 animate-bounce" style={{ animationDuration: '2s' }} />
+                    <span>Flag Accepted! (+{submissionFeedback.pointsAwarded} pts)</span>
+                  </div>
+                  <button
+                    onClick={() => setShowCelebration(true)}
+                    className="text-[10px] text-emerald-300/80 hover:text-emerald-200 underline font-semibold flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3 text-emerald-400" /> Celebration
+                  </button>
                 </div>
                 <p className="text-xs text-zinc-300 leading-relaxed font-sans">
                   {submissionFeedback.message}
@@ -1313,6 +1344,25 @@ export const ChallengeWorkspacePage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* SUCCESS CELEBRATION: Particle Burst & Solved Dialog       */}
+      {/* ======================================================== */}
+      {showCelebration && (
+        <>
+          <ConfettiCelebration durationMs={4500} particleCount={160} />
+          {challenge && (
+            <SolveCelebrationModal
+              isOpen={showCelebration}
+              onClose={() => setShowCelebration(false)}
+              challengeTitle={challenge.title}
+              pointsAwarded={submissionFeedback.pointsAwarded || challenge.points}
+              category={challenge.category}
+              unlockedLesson={submissionFeedback.unlockedLesson}
+            />
+          )}
+        </>
       )}
     </div>
   );
