@@ -28,7 +28,14 @@ export class TransformInterceptor<T> implements NestInterceptor<
 
     // Challenge target simulation endpoints should bypass the platform ApiResponse envelope
     if (req?.url?.includes('/targets') || res?.headersSent) {
-      return next.handle();
+      return next.handle().pipe(
+        map((data) => {
+          if (res?.headersSent) {
+            return undefined;
+          }
+          return data;
+        }),
+      );
     }
 
     const statusCode = res?.statusCode || 200;

@@ -40,8 +40,8 @@ export class TargetsController {
     @Param('slug') slug: string,
     @Req() req: Request,
     @Res() res: Response,
-  ) {
-    return this.dispatchTarget(username, slug, '', req, res);
+  ): Promise<void> {
+    await this.dispatchTarget(username, slug, '', req, res);
   }
 
   @All(':username/:slug/*path')
@@ -58,10 +58,10 @@ export class TargetsController {
     @Param('slug') slug: string,
     @Req() req: Request,
     @Res() res: Response,
-  ) {
+  ): Promise<void> {
     const rawParam = (req.params as any)?.path || req.params?.[0] || '';
     const subPath = rawParam.startsWith('/') ? rawParam : `/${rawParam}`;
-    return this.dispatchTarget(username, slug, subPath, req, res);
+    await this.dispatchTarget(username, slug, subPath, req, res);
   }
 
   /**
@@ -81,8 +81,8 @@ export class TargetsController {
     @Param('identifier') identifier: string,
     @Req() req: Request,
     @Res() res: Response,
-  ) {
-    return this.dispatchTarget(identifier, undefined, '', req, res);
+  ): Promise<void> {
+    await this.dispatchTarget(identifier, undefined, '', req, res);
   }
 
   @All(':identifier/*path')
@@ -98,10 +98,10 @@ export class TargetsController {
     @Param('identifier') identifier: string,
     @Req() req: Request,
     @Res() res: Response,
-  ) {
+  ): Promise<void> {
     const rawParam = (req.params as any)?.path || req.params?.[0] || '';
     const subPath = rawParam.startsWith('/') ? rawParam : `/${rawParam}`;
-    return this.dispatchTarget(identifier, undefined, subPath, req, res);
+    await this.dispatchTarget(identifier, undefined, subPath, req, res);
   }
 
   private async dispatchTarget(
@@ -110,27 +110,29 @@ export class TargetsController {
     subPath: string,
     req: Request,
     res: Response,
-  ) {
-    // 1. Resolve player target context & deterministic flag (supports instance UUID, token, or legacy pair)
-    const effectiveIdentifier1 =
-      identifier1 ||
-      (req.headers['x-instance-token'] as string) ||
-      (req.headers['x-target-token'] as string);
+  ): Promise<any> {
+    try {
+      // 1. Resolve player target context & deterministic flag (supports instance UUID, token, or legacy pair)
+      const effectiveIdentifier1 =
+        identifier1 ||
+        (req.headers['x-instance-token'] as string) ||
+        (req.headers['x-target-token'] as string);
 
-    const context = await this.labsService.resolveTargetContext(
-      effectiveIdentifier1,
-      identifier2,
-      (req as any).user,
-    );
+      const context = await this.labsService.resolveTargetContext(
+        effectiveIdentifier1,
+        identifier2,
+        (req as any).user,
+      );
 
-    if (!context) {
-      return res.status(HttpStatus.NOT_FOUND).json({
-        error: 'Target Environment Not Found',
-        message:
-          'Could not resolve target environment. Verify your target host, port, or instance token.',
-        statusCode: HttpStatus.NOT_FOUND,
-      });
-    }
+      if (!context) {
+        res.status(HttpStatus.NOT_FOUND).json({
+          error: 'Target Environment Not Found',
+          message:
+            'Could not resolve target environment. Verify your target host, port, or instance token.',
+          statusCode: HttpStatus.NOT_FOUND,
+        });
+        return;
+      }
 
     const { challenge, rawFlag, user } = context;
     const actualSubpath = context.effectiveSubpath
@@ -674,7 +676,7 @@ export class TargetsController {
       });
     }
 
-    return res.status(HttpStatus.OK).json({
+    res.status(HttpStatus.OK).json({
       status: 'TARGET_ONLINE',
       player: user.username,
       challengeSlug: challenge.slug,
@@ -683,5 +685,15 @@ export class TargetsController {
       message:
         'Request received by target microservice. Craft your exploit payload to discover the flag.',
     });
+  } catch (err: any) {
+    this.logger.error(`Target simulation error: ${err.message}`, err.stack);
+    if (!res.headersSent) {
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        error: 'Target Execution Error',
+        message: err.message || 'Target simulation internal error',
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
+    }
   }
+}
 }
