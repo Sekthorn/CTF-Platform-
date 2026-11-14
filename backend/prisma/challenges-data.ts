@@ -24,6 +24,11 @@ export interface ChallengeSeedData {
 
 export const CATEGORIES_DATA = [
   {
+    name: 'Foundations',
+    slug: 'foundations',
+    description: 'Web Security Fundamentals: HTTP/2 semantics, Same-Origin Policy (SOP), CORS, cookie flags (RFC 6265), proxies, and OWASP Top 10 threat modeling.',
+  },
+  {
     name: 'Authentication & Access Control',
     slug: 'auth-access-control',
     description: 'Vulnerabilities in user identification, password policies, session handling, IDOR, and role-based access control.',
@@ -1020,9 +1025,11 @@ export const ALL_50_CHALLENGES: ChallengeSeedData[] = [
   },
 ];
 
+import { FOUNDATIONS_CHALLENGES } from './challenges/foundations-challenges';
 import { NEW_BATCH1_CHALLENGES } from './challenges/batch-challenges-data';
 import { NEW_BATCH2_CHALLENGES } from './challenges/batch2-challenges-data';
 import { NEW_BATCH3_CHALLENGES } from './challenges/batch3-challenges-data';
+ALL_50_CHALLENGES.unshift(...FOUNDATIONS_CHALLENGES);
 ALL_50_CHALLENGES.push(...NEW_BATCH1_CHALLENGES);
 ALL_50_CHALLENGES.push(...NEW_BATCH2_CHALLENGES);
 ALL_50_CHALLENGES.push(...NEW_BATCH3_CHALLENGES);

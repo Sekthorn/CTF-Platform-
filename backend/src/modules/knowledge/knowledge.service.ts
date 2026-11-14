@@ -99,7 +99,9 @@ export class KnowledgeService {
 
     const items = lessons.map((lesson) => {
       const isChallengeSolved = solvedChallengeIds.has(lesson.challengeId);
-      const isUnlocked = isAdmin || isChallengeSolved;
+      const isFoundation =
+        lesson.category.trim().toLowerCase() === 'foundations';
+      const isUnlocked = isAdmin || isFoundation || isChallengeSolved;
       const progress = lesson.userProgress[0];
       const isCompleted = progress?.status === ProgressStatus.SOLVED;
 
@@ -167,7 +169,9 @@ export class KnowledgeService {
     }
 
     const isAdmin = userRole === UserRole.ADMIN;
-    let isUnlocked = isAdmin;
+    const isFoundation =
+      lesson.category.trim().toLowerCase() === 'foundations';
+    let isUnlocked = isAdmin || isFoundation;
 
     if (!isUnlocked) {
       const challengeProgress =
@@ -330,7 +334,9 @@ export class KnowledgeService {
     >();
 
     for (const l of allLessons) {
-      const isUnlocked = isAdmin || solvedChallengeIds.has(l.challengeId);
+      const isFoundation = l.category.trim().toLowerCase() === 'foundations';
+      const isUnlocked =
+        isAdmin || isFoundation || solvedChallengeIds.has(l.challengeId);
       const isCompleted = completedLessonIds.has(l.id);
 
       if (isUnlocked) unlockedCount++;

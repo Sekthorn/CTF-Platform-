@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -7,6 +7,7 @@ import {
   Compass,
   Trophy,
   Award,
+  TrendingUp,
   User,
   Settings,
   X,
@@ -15,6 +16,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import apiClient from '@/services/api';
 
 interface MobileDrawerProps {
   isOpen: boolean;
@@ -25,20 +27,96 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { user, admin, logout } = useAuth();
+  const { user, admin, isAdmin, logout } = useAuth();
   const currentUser = user || admin;
+  const [challengeCount, setChallengeCount] = useState<number | null>(null);
+  const [knowledgeCount, setKnowledgeCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+
+    apiClient
+      .get('/challenges', { params: { limit: 1 } })
+      .then((res) => {
+        if (!active) return;
+        const total =
+          res.data?.data?.pagination?.total ??
+          res.data?.pagination?.total ??
+          res.data?.data?.meta?.total ??
+          res.data?.meta?.total;
+        if (typeof total === 'number' && total > 0) {
+          setChallengeCount(total);
+        }
+      })
+      .catch(() => {});
+
+    apiClient
+      .get('/knowledge/lessons', { params: { limit: 1 } })
+      .then((res) => {
+        if (!active) return;
+        const total =
+          res.data?.data?.meta?.total ??
+          res.data?.meta?.total ??
+          res.data?.data?.pagination?.total ??
+          res.data?.pagination?.total;
+        if (typeof total === 'number' && total > 0) {
+          setKnowledgeCount(total);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const sections = [
     {
-      title: 'Learning',
-      items: [
-        { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-        { label: 'Challenges', path: '/challenges', icon: Flag, badge: '50' },
-        { label: 'Security Knowledge', path: '/knowledge', icon: BookOpen, badge: '50' },
-        { label: 'Learning Paths', path: '/learning-paths', icon: Compass },
-      ],
+      title: isAdmin ? 'Administration' : 'Learning',
+      items: isAdmin
+        ? [
+            { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+            {
+              label: 'Challenges',
+              path: '/admin/challenges',
+              icon: Flag,
+              ...(challengeCount !== null ? { badge: String(challengeCount) } : {}),
+            },
+            {
+              label: 'Knowledge Admin',
+              path: '/admin/knowledge',
+              icon: BookOpen,
+              ...(knowledgeCount !== null ? { badge: String(knowledgeCount) } : {}),
+            },
+            {
+              label: 'Security Knowledge',
+              path: '/knowledge',
+              icon: BookOpen,
+              ...(knowledgeCount !== null ? { badge: String(knowledgeCount) } : {}),
+            },
+            { label: 'Learning Progress', path: '/learning-progress', icon: TrendingUp },
+            { label: 'Learning Paths', path: '/learning-paths', icon: Compass },
+          ]
+        : [
+            { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+            {
+              label: 'Challenges',
+              path: '/challenges',
+              icon: Flag,
+              ...(challengeCount !== null ? { badge: String(challengeCount) } : {}),
+            },
+            {
+              label: 'Security Knowledge',
+              path: '/knowledge',
+              icon: BookOpen,
+              ...(knowledgeCount !== null ? { badge: String(knowledgeCount) } : {}),
+            },
+            { label: 'Learning Progress', path: '/learning-progress', icon: TrendingUp },
+            { label: 'Learning Paths', path: '/learning-paths', icon: Compass },
+          ],
     },
     {
       title: 'Community',

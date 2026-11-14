@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { MobileDrawer } from '@/components/layout/MobileDrawer';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+
+const OutletLoadingFallback: React.FC = () => (
+  <div className="flex flex-col items-center justify-center min-h-[45vh] space-y-2.5 font-mono animate-in fade-in duration-100">
+    <div className="w-7 h-7 rounded-full border-2 border-emerald-500/20 border-t-emerald-400 animate-spin" />
+    <span className="text-[11px] text-cyber-muted tracking-wider uppercase">Loading Workspace...</span>
+  </div>
+);
 
 export const AppLayout: React.FC = () => {
   const location = useLocation();
@@ -43,7 +50,9 @@ export const AppLayout: React.FC = () => {
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-5 lg:px-6 lg:py-4 bg-cyber-bg">
           <div className="w-full max-w-[1720px] mx-auto space-y-4">
             <ErrorBoundary key={location.pathname} resetKey={location.pathname}>
-              <Outlet />
+              <Suspense fallback={<OutletLoadingFallback />}>
+                <Outlet />
+              </Suspense>
             </ErrorBoundary>
           </div>
         </main>

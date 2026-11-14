@@ -22,6 +22,7 @@ export const LeaderboardPage: React.FC = () => {
   const [isAdminView, setIsAdminView] = useState(false);
   const [totalParticipants, setTotalParticipants] = useState<number>(1);
   const [search, setSearch] = useState('');
+  const deferredSearch = React.useDeferredValue(search);
 
   // Fetch live from backend API
   const fetchLeaderboard = useCallback((showSpinner = false) => {
@@ -108,9 +109,9 @@ export const LeaderboardPage: React.FC = () => {
   if (isAdmin || isAdminView) {
     const filteredUsers = users.filter(
       (u) =>
-        !search ||
-        u.username.toLowerCase().includes(search.toLowerCase()) ||
-        u.handle.toLowerCase().includes(search.toLowerCase())
+        !deferredSearch ||
+        u.username.toLowerCase().includes(deferredSearch.toLowerCase()) ||
+        u.handle.toLowerCase().includes(deferredSearch.toLowerCase())
     );
     const top3 = users.slice(0, 3);
     const currentUsername = user?.username || '';

@@ -61,5 +61,15 @@ export const STATIC_CHALLENGE_FLAGS: Record<string, string> = {
   "double-spend": "WEBSEC{double_spend_race_condition_toctou_parallel_mastered_2026}",
   "cookie-monster": "WEBSEC{cookie_monster_insecure_deserialization_isadmin_escalated_2026}",
   "object-lessons": "WEBSEC{object_lessons_deserialization_gadget_chain_sandbox_conquered_2026}",
-  "client-side-inspection": "WEBSEC{client_side_recon_devtools_mastered}"
+  "client-side-inspection": "WEBSEC{client_side_recon_devtools_mastered}",
+  "http2-header-semantics-lab": "WEBSEC{http2_pseudo_headers_rfc9113_understood}",
+  "http-method-verb-safety-lab": "WEBSEC{safe_idempotent_http_methods_rfc9110}",
+  "owasp-top10-taxonomy-lab": "WEBSEC{owasp_a00_cwe_cvss_taxonomy_decoded}",
+  "tls-https-transport-basics-lab": "WEBSEC{tls_hsts_transport_integrity_verified}",
+  "same-origin-policy-boundaries-lab": "WEBSEC{same_origin_tuple_scheme_host_port}",
+  "cors-preflight-trust-flaws-lab": "WEBSEC{cors_strict_allowlist_no_origin_reflection}",
+  "rfc6265-cookie-flags-lab": "WEBSEC{rfc6265_httponly_secure_samesite_enforced}",
+  "browser-storage-session-basics-lab": "WEBSEC{httponly_cookie_beats_localstorage_for_tokens}",
+  "web-proxy-interception-lab": "WEBSEC{never_trust_client_never_skip_server_validation}",
+  "owasp-threat-modeling-a00-lab": "WEBSEC{owasp_a00_asvs_v1_stride_threat_model_mastered}"
 };

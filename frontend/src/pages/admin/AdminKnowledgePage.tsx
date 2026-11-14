@@ -13,26 +13,28 @@ import {
   Save,
   BookOpen,
   Layers,
+  MapPin,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DifficultyBadge } from '@/components/ui/DifficultyBadge';
 import { knowledgeService } from '@/services/knowledge.service';
 import { KnowledgeLessonListItem } from '@/types';
+import {
+  ROADMAP_NODES,
+  findRoadmapNodeForCategory,
+  getCanonicalDbCategory,
+} from '@/constants/learningRoadmap';
 
 export const ADMIN_CATEGORIES = [
-  { slug: 'all', name: 'All Categories' },
-  { slug: 'auth-access-control', name: 'Authentication & Access Control' },
-  { slug: 'sql-injection', name: 'SQL Injection' },
-  { slug: 'cross-site-scripting', name: 'Cross-Site Scripting (XSS)' },
-  { slug: 'file-handling-path-traversal', name: 'File Handling & Path Traversal' },
-  { slug: 'api-security-server-side', name: 'API Security & Server-Side' },
-  { slug: 'idor', name: 'Insecure Direct Object Reference (IDOR)' },
-  { slug: 'ssrf', name: 'Server-Side Request Forgery (SSRF)' },
-  { slug: 'command-injection', name: 'Command Injection' },
-  { slug: 'jwt', name: 'JSON Web Token (JWT)' },
-  { slug: 'business-logic', name: 'Business Logic Vulnerabilities' },
-  { slug: 'insecure-deserialization', name: 'Insecure Deserialization' },
+  { slug: 'all', name: 'All Categories', dbValue: 'all', level: 'ALL' },
+  { slug: 'foundations', name: 'Web Security Fundamentals', dbValue: 'Foundations', level: 'BASE' },
+  ...ROADMAP_NODES.slice(0, 11).map((node) => ({
+    slug: node.id,
+    name: node.name,
+    dbValue: node.dbCategory,
+    level: node.level,
+  })),
 ];
 
 export const AdminKnowledgePage: React.FC = () => {
@@ -65,9 +67,13 @@ export const AdminKnowledgePage: React.FC = () => {
   const handleEditClick = async (lesson: KnowledgeLessonListItem) => {
     try {
       const full = await knowledgeService.getLessonBySlug(lesson.slug);
-      setEditingLesson(full);
+      setEditingLesson({
+        ...full,
+        category: getCanonicalDbCategory(full.category),
+      });
     } catch (err: any) {
       console.error('Failed to load lesson for edit:', err);
+      setMessage({ text: 'Failed to load lesson details', type: 'error' });
     }
   };
 
@@ -75,12 +81,16 @@ export const AdminKnowledgePage: React.FC = () => {
     if (!editingLesson) return;
     try {
       setIsSaving(true);
+      const parsedCvss =
+        editingLesson.cvssScore === '' || editingLesson.cvssScore === null || editingLesson.cvssScore === undefined
+          ? undefined
+          : Number(editingLesson.cvssScore);
       await knowledgeService.updateLesson(editingLesson.id, {
         title: editingLesson.title,
         description: editingLesson.description,
-        category: editingLesson.category,
+        category: getCanonicalDbCategory(editingLesson.category),
         status: editingLesson.status,
-        cvssScore: Number(editingLesson.cvssScore) || undefined,
+        cvssScore: Number.isNaN(parsedCvss) ? undefined : parsedCvss,
         overview: editingLesson.overview,
         rootCause: editingLesson.rootCause,
         prevention: editingLesson.prevention,
@@ -113,22 +123,9 @@ export const AdminKnowledgePage: React.FC = () => {
 
   const matchesCategory = (lessonCategory: string, filterSlug: string) => {
     if (filterSlug === 'all') return true;
-    if (lessonCategory === filterSlug) return true;
-    const normL = (lessonCategory || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const normF = (filterSlug || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (normL === normF) return true;
-    if (filterSlug === 'idor' && normL.includes('idor')) return true;
-    if (filterSlug === 'ssrf' && normL.includes('ssrf')) return true;
-    if (filterSlug === 'command-injection' && normL.includes('command')) return true;
-    if (filterSlug === 'jwt' && normL.includes('jwt')) return true;
-    if (filterSlug === 'business-logic' && normL.includes('business')) return true;
-    if (filterSlug === 'insecure-deserialization' && normL.includes('deserialization')) return true;
-    if (filterSlug === 'auth-access-control' && normL.includes('auth')) return true;
-    if (filterSlug === 'sql-injection' && normL.includes('sql')) return true;
-    if (filterSlug === 'cross-site-scripting' && (normL.includes('cross') || normL.includes('xss'))) return true;
-    if (filterSlug === 'file-handling-path-traversal' && (normL.includes('file') || normL.includes('path'))) return true;
-    if (filterSlug === 'api-security-server-side' && normL.includes('api')) return true;
-    return false;
+    const matchedNode = findRoadmapNodeForCategory(lessonCategory);
+    if (matchedNode) return matchedNode.id === filterSlug;
+    return (lessonCategory || '').toLowerCase() === filterSlug.toLowerCase();
   };
 
   const getCategoryCount = (filterSlug: string) => {
@@ -163,8 +160,8 @@ export const AdminKnowledgePage: React.FC = () => {
           <h1 className="text-xl md:text-2xl font-bold text-cyber-text tracking-tight">
             Security Knowledge Management
           </h1>
-          <p className="text-xs md:text-sm text-cyber-muted mt-0.5">
-            Manage, audit, and publish all 63 educational security knowledge lessons across 11 vulnerability categories.
+          <p className="text-xs md:text-sm text-cyber-muted mt-0.5 xl:whitespace-nowrap">
+            Manage, audit, and publish all {lessons.length || 73} security lessons across Foundations and 11 sequential roadmap categories.
           </p>
 
           {/* Quick Metrics Badges */}
@@ -175,7 +172,7 @@ export const AdminKnowledgePage: React.FC = () => {
             </span>
             <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-cyber-elevated text-cyber-text border border-cyber-border flex items-center gap-1">
               <Layers className="w-3 h-3 text-cyan-400" />
-              11 Vulnerability Categories
+              11 Sequential Roadmap Levels
             </span>
             <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">
               {publishedCount} Published
@@ -188,7 +185,7 @@ export const AdminKnowledgePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <Button
             variant="outline"
             size="sm"
@@ -198,6 +195,16 @@ export const AdminKnowledgePage: React.FC = () => {
             <RefreshCw className="w-3.5 h-3.5" />
             Refresh
           </Button>
+          <Link to="/learning-progress">
+            <Button
+              variant="outline"
+              size="sm"
+              className="font-mono text-xs border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 gap-1.5 h-8"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              View Roadmap
+            </Button>
+          </Link>
           <Link to="/knowledge">
             <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold font-mono text-xs gap-1.5 shadow-md h-8">
               <ExternalLink className="w-3.5 h-3.5" />
@@ -237,22 +244,43 @@ export const AdminKnowledgePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Category Pills Bar: Multi-row wrapped with live counts and ZERO horizontal scrolling */}
+      {/* Category Pills Bar: Ordered sequentially matching the Student Learning Roadmap (LVL 1 → LVL 11) */}
       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
         {ADMIN_CATEGORIES.map((cat) => {
           const isSelected = categoryFilter === cat.slug;
           const count = getCategoryCount(cat.slug);
+          const publishedInCat =
+            cat.slug === 'all'
+              ? publishedCount
+              : lessons.filter((l) => matchesCategory(l.category, cat.slug) && l.status === 'PUBLISHED').length;
+          const hasNoPublished = cat.slug !== 'all' && lessons.length > 0 && publishedInCat === 0;
 
           return (
             <button
               key={cat.slug}
               onClick={() => setCategoryFilter(cat.slug)}
+              title={
+                cat.slug === 'all'
+                  ? 'Show all categories'
+                  : `${cat.level} in Student Roadmap (${publishedInCat}/${count} published)`
+              }
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono transition-all duration-150 select-none cursor-pointer ${
                 isSelected
                   ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400'
+                  : hasNoPublished
+                  ? 'bg-amber-950/30 text-amber-300 border border-amber-500/40 hover:bg-amber-950/50 font-medium'
                   : 'bg-cyber-card text-cyber-muted border border-cyber-border hover:border-slate-700 hover:text-cyber-text hover:bg-cyber-elevated font-medium'
               }`}
             >
+              {cat.level !== 'ALL' && (
+                <span
+                  className={`text-[9.5px] px-1.5 py-0.2 rounded font-extrabold ${
+                    isSelected ? 'bg-slate-950/20 text-slate-950' : 'bg-emerald-500/10 text-emerald-400'
+                  }`}
+                >
+                  {cat.level}
+                </span>
+              )}
               <span>{cat.name}</span>
               <span
                 className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
@@ -275,7 +303,7 @@ export const AdminKnowledgePage: React.FC = () => {
             <thead className="bg-cyber-elevated/70 border-b border-cyber-border text-cyber-muted uppercase tracking-wider font-mono text-[10px]">
               <tr>
                 <th className="py-2.5 px-3.5">Title & Slug</th>
-                <th className="py-2.5 px-3.5">Category</th>
+                <th className="py-2.5 px-3.5">Roadmap Stage</th>
                 <th className="py-2.5 px-3.5">Difficulty</th>
                 <th className="py-2.5 px-3.5">Standards</th>
                 <th className="py-2.5 px-3.5">Linked Challenge</th>
@@ -298,16 +326,30 @@ export const AdminKnowledgePage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filtered.map((item) => (
+                filtered.map((item) => {
+                  const stageNode = findRoadmapNodeForCategory(item.category);
+                  return (
                   <tr key={item.id} className="hover:bg-cyber-elevated/40 transition-colors">
                     <td className="py-2.5 px-3.5 font-bold text-cyber-text max-w-xs truncate">
                       <div>{item.title}</div>
                       <div className="text-[10px] font-normal text-cyber-muted truncate">{item.slug}</div>
                     </td>
                     <td className="py-2.5 px-3.5 text-cyber-muted">
-                      <span className="px-2 py-0.5 rounded-full bg-cyber-elevated border border-cyber-border/50 text-cyber-text text-[10px]">
-                        {item.category}
-                      </span>
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-cyber-elevated border border-cyber-border/50 text-cyber-text text-[10px]">
+                        {stageNode ? (
+                          <>
+                            <span className="text-emerald-400 font-bold">{stageNode.level}</span>
+                            <span>{stageNode.name}</span>
+                          </>
+                        ) : item.category.toLowerCase() === 'foundations' ? (
+                          <>
+                            <span className="text-cyan-400 font-bold">BASE</span>
+                            <span>Web Security Fundamentals</span>
+                          </>
+                        ) : (
+                          <span>{item.category}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-2.5 px-3.5">
                       <DifficultyBadge difficulty={item.difficulty as any} />
@@ -370,7 +412,8 @@ export const AdminKnowledgePage: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -419,15 +462,15 @@ export const AdminKnowledgePage: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-cyber-muted block mb-1">Category</label>
+                <label className="text-cyber-muted block mb-1">Roadmap Category</label>
                 <select
                   value={editingLesson.category}
                   onChange={(e) => setEditingLesson({ ...editingLesson, category: e.target.value })}
                   className="w-full bg-cyber-elevated border border-cyber-border rounded-md p-2 text-cyber-text text-xs"
                 >
                   {ADMIN_CATEGORIES.filter((c) => c.slug !== 'all').map((c) => (
-                    <option key={c.slug} value={c.name}>
-                      {c.name}
+                    <option key={c.slug} value={c.dbValue}>
+                      {c.level} · {c.name}
                     </option>
                   ))}
                 </select>

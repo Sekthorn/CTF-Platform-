@@ -22,6 +22,7 @@ import { KnowledgeLessonListItem } from '@/types';
 
 const CATEGORIES = [
   { label: 'All Categories', slug: 'all' },
+  { label: 'Web Security Fundamentals', slug: 'Foundations' },
   { label: 'Authentication & Access Control', slug: 'auth-access-control' },
   { label: 'SQL Injection', slug: 'sql-injection' },
   { label: 'Cross-Site Scripting (XSS)', slug: 'cross-site-scripting' },
@@ -121,7 +122,7 @@ export const KnowledgeLibraryPage: React.FC = () => {
   const completedCount = lessons.filter((l) => l.isCompleted).length;
 
   const getCategoryCount = (catSlug: string) => {
-    if (catSlug === 'all') return lessons.length || 63;
+    if (catSlug === 'all') return lessons.length;
     return lessons.filter((l) => {
       if (l.category === catSlug) return true;
       const normalizedL = l.category.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -146,20 +147,20 @@ export const KnowledgeLibraryPage: React.FC = () => {
         </div>
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
+          <div className="space-y-2 max-w-3xl xl:max-w-4xl flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>{lessons.length || 63} Structured Penetration Testing Guides</span>
+                <span>{lessons.length} Structured Penetration Testing Guides</span>
               </div>
               {isAdmin && (
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-medium bg-purple-500/10 text-purple-400 border border-purple-500/30">
                   <Shield className="w-3.5 h-3.5" />
-                  <span>Admin Master Access ({lessons.length || 63}/{lessons.length || 63} Unlocked)</span>
+                  <span>Admin Master Access ({lessons.length}/{lessons.length} Unlocked)</span>
                 </div>
               )}
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-100 font-mono">
+            <h1 className="text-2xl sm:text-3xl xl:text-4xl font-bold tracking-tight text-zinc-100 font-mono sm:whitespace-nowrap">
               Security Knowledge & Defense Library
             </h1>
             <p className="text-sm md:text-base text-zinc-400 leading-relaxed">
@@ -170,10 +171,10 @@ export const KnowledgeLibraryPage: React.FC = () => {
           </div>
 
           {/* Quick Analytics Pill Box */}
-          <div className="flex flex-wrap items-center gap-3 bg-zinc-950/70 p-4 rounded-xl border border-zinc-800">
+          <div className="flex flex-wrap items-center gap-3 bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 shrink-0">
             <div className="text-center px-4 border-r border-zinc-800">
               <div className="text-2xl font-bold font-mono text-emerald-400">
-                {unlockedCount} / {lessons.length || 50}
+                {unlockedCount} / {lessons.length}
               </div>
               <div className="text-xs text-zinc-400 uppercase tracking-wider font-mono">Unlocked</div>
             </div>

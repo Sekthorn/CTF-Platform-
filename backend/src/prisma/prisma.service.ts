@@ -80,6 +80,54 @@ export class PrismaService
       } catch (colErr: any) {
         this.logger.debug(`submissions.instanceId column check notice: ${colErr.message}`);
       }
+
+      // Self-healing database check: ensure high-performance composite indexes exist
+      try {
+        const existingIndexes = (await this.$queryRawUnsafe(`
+          SELECT DISTINCT INDEX_NAME, TABLE_NAME FROM INFORMATION_SCHEMA.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE() AND INDEX_NAME IN (
+            'submissions_challengeId_isCorrect_idx',
+            'submissions_userId_isCorrect_idx',
+            'user_challenge_progress_userId_status_idx',
+            'user_challenge_progress_challengeId_status_idx',
+            'user_lesson_progress_userId_status_idx'
+          )
+        `).catch(() => [])) as any[];
+
+        const indexSet = new Set(
+          Array.isArray(existingIndexes)
+            ? existingIndexes.map((i: any) => `${i.TABLE_NAME}.${i.INDEX_NAME}`)
+            : []
+        );
+
+        if (!indexSet.has('submissions.submissions_challengeId_isCorrect_idx')) {
+          await this.$executeRawUnsafe(
+            'CREATE INDEX `submissions_challengeId_isCorrect_idx` ON `submissions`(`challengeId`, `isCorrect`)'
+          ).catch(() => {});
+        }
+        if (!indexSet.has('submissions.submissions_userId_isCorrect_idx')) {
+          await this.$executeRawUnsafe(
+            'CREATE INDEX `submissions_userId_isCorrect_idx` ON `submissions`(`userId`, `isCorrect`)'
+          ).catch(() => {});
+        }
+        if (!indexSet.has('user_challenge_progress.user_challenge_progress_userId_status_idx')) {
+          await this.$executeRawUnsafe(
+            'CREATE INDEX `user_challenge_progress_userId_status_idx` ON `user_challenge_progress`(`userId`, `status`)'
+          ).catch(() => {});
+        }
+        if (!indexSet.has('user_challenge_progress.user_challenge_progress_challengeId_status_idx')) {
+          await this.$executeRawUnsafe(
+            'CREATE INDEX `user_challenge_progress_challengeId_status_idx` ON `user_challenge_progress`(`challengeId`, `status`)'
+          ).catch(() => {});
+        }
+        if (!indexSet.has('user_lesson_progress.user_lesson_progress_userId_status_idx')) {
+          await this.$executeRawUnsafe(
+            'CREATE INDEX `user_lesson_progress_userId_status_idx` ON `user_lesson_progress`(`userId`, `status`)'
+          ).catch(() => {});
+        }
+      } catch (idxErr: any) {
+        this.logger.debug(`Performance index check notice: ${idxErr.message}`);
+      }
     } catch (error) {
       this.logger.warn(
         `Prisma initial connection deferred: ${(error as Error).message}`,

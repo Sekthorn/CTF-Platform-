@@ -307,6 +307,8 @@ model Submission {
   @@index([challengeId])
   @@index([instanceId])
   @@index([submittedAt])
+  @@index([challengeId, isCorrect])
+  @@index([userId, isCorrect])
   @@map("submissions")
 }
 
@@ -330,6 +332,8 @@ model UserChallengeProgress {
 
   @@unique([userId, challengeId])
   @@index([status])
+  @@index([userId, status])
+  @@index([challengeId, status])
   @@map("user_challenge_progress")
 }
 
@@ -394,6 +398,7 @@ model UserLessonProgress {
   @@index([userId])
   @@index([lessonId])
   @@index([status])
+  @@index([userId, status])
   @@map("user_lesson_progress")
 }
 

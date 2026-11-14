@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '@/services/api';
-import { Eye, EyeOff, Check, X, AlertCircle } from 'lucide-react';
-import { AvatarPicker } from '@/components/profile/AvatarPicker';
+import { Check, X, Eye, EyeOff } from 'lucide-react';
 import { DEFAULT_AVATAR } from '@/data/avatars';
 
 export const RegisterPage: React.FC = () => {
@@ -13,22 +12,18 @@ export const RegisterPage: React.FC = () => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [selectedAvatar, setSelectedAvatar] = useState<string>(DEFAULT_AVATAR);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Animation Refs & State for Left Terminal Panel
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [flagText, setFlagText] = useState<string>('');
-  const [logLines, setLogLines] = useState<string[]>([]);
-  const [clockTime, setClockTime] = useState<string>('06:42:10');
+  // Live countdown timer state (ticks down from 06:42:08)
+  const [clockTime, setClockTime] = useState<string>('06:42:08');
 
-  // Countdown timer
+  // Ticking countdown timer
   useEffect(() => {
-    let secondsLeft = 6 * 3600 + 42 * 60 + 10;
+    let secondsLeft = 6 * 3600 + 42 * 60 + 8;
     const pad = (n: number) => (n < 10 ? '0' + n : '' + n);
     const interval = setInterval(() => {
       secondsLeft = Math.max(0, secondsLeft - 1);
@@ -38,99 +33,6 @@ export const RegisterPage: React.FC = () => {
       setClockTime(`${h}:${m}:${s}`);
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
-
-  // Scrambling Flag & Terminal Logs Animation
-  useEffect(() => {
-    const targetFlag = 'websec{n3w_pl4y3r_r3g1st3r}';
-    const pool = 'abcdefghijklmnopqrstuvwxyz0123456789_';
-    let step = 0;
-    const total = targetFlag.length;
-
-    const flagTimer = setInterval(() => {
-      let out = '';
-      for (let i = 0; i < total; i++) {
-        if (i < step || targetFlag[i] === '{' || targetFlag[i] === '}') {
-          out += targetFlag[i];
-        } else if (i < step + 6) {
-          out += pool[Math.floor(Math.random() * pool.length)];
-        }
-      }
-      setFlagText(out);
-      step++;
-      if (step > total + 1) {
-        clearInterval(flagTimer);
-        setFlagText(targetFlag);
-      }
-    }, 55);
-
-    const fullLogs = [
-      '<span class="log-ok">[ ok ]</span> security perimeter active',
-      '<span class="log-ok">[ ok ]</span> encryption suites initialized',
-      '<span class="log-ok">[ ok ]</span> challenge arena open for registration',
-      '<span class="log-wn">[warn]</span> duplicate usernames are rejected',
-      'awaiting player credentials<span class="blinking-cursor"></span>',
-    ];
-
-    let lineIndex = 0;
-    const logTimer = setInterval(() => {
-      lineIndex++;
-      setLogLines(fullLogs.slice(0, lineIndex));
-      if (lineIndex >= fullLogs.length) {
-        clearInterval(logTimer);
-      }
-    }, 420);
-
-    return () => {
-      clearInterval(flagTimer);
-      clearInterval(logTimer);
-    };
-  }, []);
-
-  // Matrix Rain Background Canvas Animation
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animId: number;
-    let width = (canvas.width = canvas.parentElement?.clientWidth || window.innerWidth / 2);
-    let height = (canvas.height = canvas.parentElement?.clientHeight || window.innerHeight);
-
-    const handleResize = () => {
-      if (!canvas || !canvas.parentElement) return;
-      width = canvas.width = canvas.parentElement.clientWidth;
-      height = canvas.height = canvas.parentElement.clientHeight;
-    };
-    window.addEventListener('resize', handleResize);
-
-    const cols = Math.floor(width / 18);
-    const ypos = Array(cols).fill(0).map(() => Math.floor(Math.random() * -50));
-    const chars = '01{}[]_/>$#%*+=~|';
-
-    const render = () => {
-      ctx.fillStyle = 'rgba(10, 14, 12, 0.15)';
-      ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = '#2CFF7A';
-      ctx.font = '12px "JetBrains Mono", monospace';
-
-      ypos.forEach((y, i) => {
-        const text = chars[Math.floor(Math.random() * chars.length)];
-        const x = i * 18;
-        ctx.fillText(text, x, y);
-        if (y > 100 + Math.random() * 10000) ypos[i] = 0;
-        else ypos[i] = y + 14;
-      });
-
-      animId = requestAnimationFrame(render);
-    };
-    render();
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('resize', handleResize);
-    };
   }, []);
 
   // Real-time password validations
@@ -179,7 +81,7 @@ export const RegisterPage: React.FC = () => {
         username: username.trim(),
         email: email.trim().toLowerCase(),
         password,
-        avatarUrl: selectedAvatar,
+        avatarUrl: DEFAULT_AVATAR,
       });
 
       const message =
@@ -188,7 +90,7 @@ export const RegisterPage: React.FC = () => {
 
       setSuccessMessage(message);
 
-      // Redirect to login after 1.5 seconds with prefilled info
+      // Redirect to login after 1.5 seconds with prefilled identifier
       setTimeout(() => {
         navigate('/login', {
           state: {
@@ -211,594 +113,997 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="login-root">
+    <div className="register-page-root">
       <style>{`
-        :root {
-          --bg: #0A0E0C;
-          --panel: #0D1310;
-          --line: #18261F;
-          --accent: #2CFF7A;
-          --accent-dim: #1ea850;
-          --text: #D8E4DC;
-          --muted: #667D70;
-          --danger: #FF5A5A;
-          --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-          --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
+        .register-page-root {
+          --bg: #060908;
+          --bg-grid: rgba(45, 255, 122, 0.05);
+          --accent: #2dff7a;
+          --accent-hover: #8dffb8;
+          --accent-glow: rgba(45, 255, 122, 0.35);
+          --text: #e6f5ec;
+          --text-muted: #93ab9f;
+          --text-label: #b9d3c4;
+          --input-bg: #0b110e;
+          --input-border: #22372b;
+          --input-focus-ring: rgba(45, 255, 122, 0.3);
+          --divider: #14231b;
+          --btn-text: #04120a;
+          --danger: #ff5d5d;
 
-        .login-root {
+          --font-heading: 'Sora', sans-serif;
+          --font-mono: 'IBM Plex Mono', monospace;
+
           min-height: 100vh;
+          min-height: 900px;
           width: 100%;
-          background: var(--bg);
+          background-color: var(--bg);
+          background-image: 
+            linear-gradient(to right, var(--bg-grid) 1px, transparent 1px),
+            linear-gradient(to bottom, var(--bg-grid) 1px, transparent 1px);
+          background-size: 32px 32px;
           color: var(--text);
           font-family: var(--font-mono);
-          display: flex;
-          align-items: stretch;
-          overflow-x: hidden;
+          font-size: 14px;
+          line-height: 1.5;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
 
-        .login-shell {
+        .register-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1.05fr 1px 1.15fr;
           min-height: 100vh;
+          min-height: 900px;
           width: 100%;
         }
 
-        .login-side {
-          position: relative;
-          padding: 48px;
+        .register-v-divider {
+          background-color: var(--divider);
+          width: 1px;
+          height: 100%;
+        }
+
+        /* LEFT PANEL: Branding, Radar & Stats */
+        .register-left-panel {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          background: radial-gradient(circle at 15% 20%, rgba(44, 255, 122, 0.04) 0%, transparent 60%);
-          gap: 32px;
-          border-right: 1px solid var(--line);
-        }
-
-        .login-side::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
-          opacity: .5;
-        }
-
-        .login-side > * {
+          padding: 48px 56px 48px 64px;
           position: relative;
-          z-index: 1;
         }
 
-        #rain-canvas {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          opacity: .16;
-          z-index: 0;
+        .register-brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          text-decoration: none;
+          width: fit-content;
+          transition: transform 0.2s ease, opacity 0.2s ease;
         }
 
-        .login-brand {
+        .register-brand:hover {
+          transform: translateY(-1px);
+          opacity: 0.95;
+        }
+
+        .register-brand-title {
+          font-family: var(--font-heading);
+          font-size: 21px;
           font-weight: 800;
-          font-size: 1.15rem;
-          letter-spacing: -0.02em;
-        }
-        .login-brand span {
-          color: var(--accent);
-        }
-
-        .login-flag {
-          font-weight: 800;
-          font-size: clamp(1.5rem, 3.2vw, 2.8rem);
-          line-height: 1.15;
-          word-break: break-all;
-          margin: 0 0 24px;
-          min-height: 3.5em;
-          text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
-        }
-        .login-flag b {
-          color: var(--accent);
+          letter-spacing: -0.025em;
+          color: var(--text);
+          display: flex;
+          align-items: center;
         }
 
-        .blinking-cursor {
+        .chromatic-title {
+          position: relative;
           display: inline-block;
-          width: .55ch;
-          height: 1em;
-          background: var(--accent);
-          vertical-align: -.12em;
-          margin-left: 2px;
-          animation: blink 1s steps(1) infinite;
-        }
-        @keyframes blink {
-          50% { opacity: 0; }
+          color: #ffffff;
         }
 
-        .login-log {
-          margin: 0;
-          color: var(--muted);
-          font-size: .8125rem;
-          min-height: 7.5em;
-          white-space: pre-wrap;
-          line-height: 1.7;
-        }
-        .log-ok { color: var(--accent); }
-        .log-wn { color: #E8B93A; }
-
-        .login-status {
-          display: grid;
-          grid-template-columns: repeat(3, auto);
-          gap: 8px 40px;
-          justify-content: start;
-          margin: 0;
-        }
-        .login-status dt {
-          font-size: .6875rem;
-          color: var(--muted);
-          text-transform: uppercase;
-          letter-spacing: .08em;
-          margin-bottom: 2px;
-        }
-        .login-status dd {
-          margin: 0;
-          font-size: .875rem;
-          font-weight: 600;
-          color: var(--text);
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .live-dot {
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          background: var(--accent);
-          box-shadow: 0 0 8px var(--accent);
-          animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: .35; }
+        .chromatic-title::before {
+          content: 'websec';
+          position: absolute;
+          left: -1px;
+          top: 0;
+          color: #ff2a5f;
+          opacity: 0.65;
+          pointer-events: none;
         }
 
-        .login-main {
+        .chromatic-title::after {
+          content: 'websec';
+          position: absolute;
+          left: 1px;
+          top: 0;
+          color: #00f0ff;
+          opacity: 0.65;
+          pointer-events: none;
+        }
+
+        .register-brand-title .accent {
+          color: var(--accent);
+          text-shadow: 0 0 10px rgba(45, 255, 122, 0.55);
+        }
+
+        /* RADAR SVG & ANIMATIONS */
+        .register-radar-wrapper {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 48px 32px;
-          background: var(--panel);
-        }
-
-        .login-card {
-          width: 100%;
-          max-width: 440px;
-        }
-
-        .login-h1 {
-          font-size: 1.5rem;
-          font-weight: 700;
-          margin: 0 0 6px;
-          letter-spacing: -0.01em;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .login-h1::before {
-          content: "$";
-          color: var(--accent);
-          font-weight: 800;
-        }
-
-        .login-sub {
-          margin: 0 0 24px;
-          font-size: .8125rem;
-          color: var(--muted);
-          line-height: 1.5;
-        }
-
-        .login-field {
-          margin-bottom: 16px;
-        }
-
-        .login-label {
-          display: block;
-          font-size: .75rem;
-          color: var(--muted);
-          margin-bottom: 6px;
-        }
-
-        .login-input-wrap {
+          margin: 24px 0;
           position: relative;
         }
 
-        .login-input {
-          width: 100%;
-          background: var(--bg);
-          border: 1px solid var(--line);
-          color: var(--text);
-          font-family: var(--font-mono);
-          font-size: .875rem;
-          padding: 10px 14px;
-          border-radius: 4px;
-          outline: none;
-          transition: border-color .15s, box-shadow .15s;
-          box-sizing: border-box;
-        }
-        .login-input:focus {
-          border-color: var(--accent);
-          box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 15%, transparent);
+        .register-radar-svg {
+          width: 440px;
+          height: 440px;
+          max-width: 100%;
+          overflow: visible;
+          user-select: none;
         }
 
-        .login-toggle {
-          position: absolute;
-          right: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: transparent;
-          border: none;
-          color: var(--muted);
-          cursor: pointer;
-          font-size: .75rem;
-          font-family: var(--font-mono);
-          padding: 4px;
+        .radar-sweep-arm {
+          transform-origin: 220px 220px;
+          animation: radar-sweep-rot 4s linear infinite;
+        }
+
+        @keyframes radar-sweep-rot {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        .radar-ping-circle {
+          transform-origin: 220px 220px;
+          animation: radar-ping-expand 3s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+        }
+
+        @keyframes radar-ping-expand {
+          0% {
+            r: 24px;
+            opacity: 0.9;
+            stroke-width: 1.5px;
+          }
+          70% {
+            r: 72px;
+            opacity: 0;
+            stroke-width: 1px;
+          }
+          100% {
+            r: 72px;
+            opacity: 0;
+            stroke-width: 0.5px;
+          }
+        }
+
+        /* Blips matching 4s rotation */
+        .blip-1-dot { animation: blip-flash 4s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; animation-delay: 0.5s; }
+        .blip-1-halo { animation: halo-expand 4s cubic-bezier(0, 0.2, 0.8, 1) infinite; animation-delay: 0.5s; }
+
+        .blip-2-dot { animation: blip-flash 4s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; animation-delay: 1.33s; }
+        .blip-2-halo { animation: halo-expand 4s cubic-bezier(0, 0.2, 0.8, 1) infinite; animation-delay: 1.33s; }
+
+        .blip-3-dot { animation: blip-flash 4s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; animation-delay: 2.5s; }
+        .blip-3-halo { animation: halo-expand 4s cubic-bezier(0, 0.2, 0.8, 1) infinite; animation-delay: 2.5s; }
+
+        .blip-4-dot { animation: blip-flash 4s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; animation-delay: 3.5s; }
+        .blip-4-halo { animation: halo-expand 4s cubic-bezier(0, 0.2, 0.8, 1) infinite; animation-delay: 3.5s; }
+
+        @keyframes blip-flash {
+          0% { opacity: 0; transform: scale(0.6); }
+          5% { opacity: 1; transform: scale(1.3); }
+          25% { opacity: 0.8; transform: scale(1); }
+          60% { opacity: 0.15; }
+          100% { opacity: 0; }
+        }
+
+        @keyframes halo-expand {
+          0% { r: 3px; opacity: 0; }
+          4% { opacity: 0.9; }
+          30% { r: 18px; opacity: 0; stroke-width: 0.75px; }
+          100% { r: 18px; opacity: 0; }
+        }
+
+        /* Bottom Hero & Stats */
+        .register-left-bottom {
           display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .login-toggle:hover {
-          color: var(--accent);
+          flex-direction: column;
+          gap: 28px;
         }
 
-        .login-btn {
-          width: 100%;
-          background: var(--accent);
-          color: #06150B;
-          border: none;
-          padding: 12px;
-          font-family: var(--font-mono);
-          font-size: .875rem;
+        .register-hero-heading {
+          font-family: var(--font-heading);
+          font-size: 38px;
+          font-weight: 800;
+          line-height: 1.15;
+          letter-spacing: -0.03em;
+        }
+
+        .register-hero-heading .line-white {
+          color: var(--text);
+          display: block;
+        }
+
+        .register-hero-heading .line-green {
+          color: var(--accent);
+          display: block;
+        }
+
+        .register-stats-row {
+          display: flex;
+          align-items: flex-start;
+          gap: 36px;
+          padding-top: 4px;
+        }
+
+        .register-stat-item {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .register-stat-value {
+          font-family: var(--font-heading);
+          font-size: 20px;
           font-weight: 700;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: background .15s, transform .05s;
-          margin-top: 8px;
-        }
-        .login-btn:hover:not(:disabled) {
-          background: #44ff88;
-        }
-        .login-btn:active:not(:disabled) {
-          transform: translateY(1px);
-        }
-        .login-btn:disabled {
-          opacity: .6;
-          cursor: progress;
+          color: var(--text);
+          letter-spacing: -0.01em;
+          line-height: 1;
         }
 
-        .login-error {
-          border-left: 3px solid var(--danger);
-          padding: 8px 12px;
-          margin: 0 0 20px;
-          color: var(--danger);
-          font-size: .8125rem;
-          background: color-mix(in srgb, var(--danger) 8%, transparent);
-        }
-
-        .login-success {
-          border-left: 3px solid var(--accent);
-          padding: 8px 12px;
-          margin: 0 0 20px;
+        .register-stat-value.live {
           color: var(--accent);
-          font-size: .8125rem;
-          background: color-mix(in srgb, var(--accent) 8%, transparent);
-        }
-
-        .req-list {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 4px 12px;
-          margin: 8px 0 16px;
-          font-size: .75rem;
-        }
-        .req-item {
           display: flex;
           align-items: center;
           gap: 6px;
-          color: var(--muted);
-        }
-        .req-item.valid {
-          color: var(--accent);
         }
 
-        .login-foot {
-          margin: 24px 0 0;
-          padding-top: 16px;
-          border-top: 1px dashed var(--line);
-          color: var(--muted);
-          font-size: .8125rem;
+        .register-stat-value.live::before {
+          content: '';
+          display: inline-block;
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background-color: var(--accent);
+          box-shadow: 0 0 8px var(--accent);
+        }
+
+        .register-stat-label {
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: var(--text-muted);
+        }
+
+        /* RIGHT PANEL: ELEVATED CYBER CARD */
+        .register-right-panel {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 48px;
+          position: relative;
+        }
+
+        .register-card-box {
+          width: 100%;
+          max-width: 520px;
+          background: rgba(11, 17, 14, 0.88);
+          border: 1px solid rgba(45, 255, 122, 0.18);
+          border-top: 2px solid var(--accent);
+          border-radius: 12px;
+          padding: 38px 42px 32px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          box-shadow: 
+            0 24px 60px rgba(0, 0, 0, 0.75),
+            0 0 1px rgba(45, 255, 122, 0.35),
+            inset 0 1px 0 rgba(45, 255, 122, 0.15);
+          backdrop-filter: blur(16px);
+          position: relative;
+        }
+
+        /* Top Brand & Status Row inside Card */
+        .register-card-brand-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding-bottom: 16px;
+          border-bottom: 1px solid rgba(45, 255, 122, 0.1);
+          margin-bottom: 2px;
+        }
+
+        .register-status-pill {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: var(--accent);
+          background: rgba(45, 255, 122, 0.08);
+          border: 1px solid rgba(45, 255, 122, 0.22);
+          border-radius: 999px;
+          padding: 3px 9px;
+        }
+
+        .register-status-pill .pulse-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--accent);
+          box-shadow: 0 0 6px var(--accent);
+          animation: reg-pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes reg-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        .register-form-header {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .register-kicker {
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: var(--accent);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .register-form-title {
+          font-family: var(--font-heading);
+          font-size: 32px;
+          font-weight: 800;
+          line-height: 1.15;
+          color: var(--text);
+          letter-spacing: -0.025em;
+        }
+
+        .register-form-subtitle {
+          font-size: 12.5px;
+          color: var(--text-muted);
+          line-height: 1.5;
+          margin-top: 2px;
+        }
+
+        /* Inputs & Form Groups */
+        .register-field-group {
+          display: flex;
+          flex-direction: column;
+          gap: 7px;
+        }
+
+        .register-field-label {
+          font-size: 11.5px;
+          font-weight: 700;
+          letter-spacing: 0.09em;
+          text-transform: uppercase;
+          color: var(--text-label);
+          cursor: pointer;
+        }
+
+        .register-field-label .req {
+          color: var(--accent);
+          margin-left: 2px;
+        }
+
+        .register-input-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+          width: 100%;
+        }
+
+        .register-text-input {
+          width: 100%;
+          height: 48px;
+          background-color: var(--input-bg);
+          border: 1px solid var(--input-border);
+          border-radius: 6px;
+          padding: 0 16px;
+          color: var(--text);
+          font-family: var(--font-mono);
+          font-size: 13.5px;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+
+        .register-text-input::placeholder {
+          color: rgba(147, 171, 159, 0.45);
+        }
+
+        .register-text-input:hover {
+          border-color: #2e4d3c;
+        }
+
+        .register-text-input:focus {
+          outline: none;
+          border-color: var(--accent);
+          box-shadow: 0 0 0 3px var(--input-focus-ring), 0 0 14px rgba(45, 255, 122, 0.12);
+          background-color: #0d1511;
+        }
+
+        .register-text-input.has-toggle {
+          padding-right: 48px;
+        }
+
+        .register-show-toggle {
+          position: absolute;
+          right: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          height: 34px;
+          background: rgba(45, 255, 122, 0.06);
+          border: 1px solid rgba(45, 255, 122, 0.16);
+          color: var(--accent);
+          cursor: pointer;
+          border-radius: 6px;
+          transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+          user-select: none;
+        }
+
+        .register-show-toggle:hover {
+          color: #fff;
+          background-color: rgba(45, 255, 122, 0.2);
+          border-color: rgba(45, 255, 122, 0.45);
+        }
+
+        .register-show-toggle:active {
+          transform: scale(0.94);
+        }
+
+        .register-show-toggle:focus-visible {
+          outline: 2px solid var(--accent);
+          outline-offset: 2px;
+        }
+
+        /* Password Requirements Grid */
+        .register-req-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 6px 12px;
+          padding: 8px 12px;
+          background: rgba(14, 24, 19, 0.5);
+          border: 1px solid rgba(45, 255, 122, 0.1);
+          border-radius: 6px;
+          font-size: 11.5px;
+          margin-top: 2px;
+        }
+
+        .register-req-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          color: var(--text-muted);
+          transition: color 0.15s ease;
+        }
+
+        .register-req-item.valid {
+          color: var(--accent);
+          font-weight: 600;
+        }
+
+        /* Submit Button */
+        .register-submit-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          width: 100%;
+          height: 52px;
+          background: linear-gradient(180deg, #38ff82 0%, #20e66b 100%);
+          color: var(--btn-text);
+          font-family: var(--font-mono);
+          font-size: 14px;
+          font-weight: 800;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          margin-top: 6px;
+          box-shadow: 0 4px 18px rgba(45, 255, 122, 0.25);
+          transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+        }
+
+        .register-submit-btn:hover:not(:disabled) {
+          background: linear-gradient(180deg, #5eff9c 0%, #2dff7a 100%);
+          box-shadow: 0 0 28px var(--accent-glow), 0 4px 20px rgba(0, 0, 0, 0.5);
+          transform: translateY(-1px);
+        }
+
+        .register-submit-btn:focus-visible {
+          outline: 2px solid #fff;
+          outline-offset: 3px;
+          box-shadow: 0 0 28px var(--accent-glow);
+        }
+
+        .register-submit-btn:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        .register-submit-btn:disabled {
+          opacity: 0.65;
+          cursor: not-allowed;
+        }
+
+        /* Links & Disclaimers */
+        .register-link-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          font-size: 12.5px;
+          color: var(--text-muted);
           line-height: 1.5;
         }
 
-        @media (max-width: 860px) {
-          .login-shell {
+        .register-accent-link {
+          color: var(--accent);
+          text-decoration: none;
+          font-weight: 600;
+          transition: color 0.15s ease, text-decoration 0.15s ease;
+        }
+
+        .register-accent-link:hover {
+          color: var(--accent-hover);
+          text-decoration: underline;
+        }
+
+        .register-divider {
+          height: 1px;
+          background-color: rgba(45, 255, 122, 0.12);
+          margin: 6px 0 2px;
+          border: none;
+        }
+
+        .register-disclaimer-box {
+          background: rgba(18, 30, 24, 0.55);
+          border: 1px solid rgba(45, 255, 122, 0.08);
+          border-radius: 6px;
+          padding: 12px 14px;
+        }
+
+        .register-disclaimer-text {
+          font-size: 11px;
+          color: #7d9688;
+          line-height: 1.55;
+          margin: 0;
+        }
+
+        /* Alerts */
+        .register-alert-box {
+          padding: 10px 14px;
+          border-radius: 6px;
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .register-alert-error {
+          background-color: rgba(255, 93, 93, 0.1);
+          border: 1px solid rgba(255, 93, 93, 0.35);
+          color: var(--danger);
+        }
+
+        .register-alert-success {
+          background-color: rgba(45, 255, 122, 0.1);
+          border: 1px solid rgba(45, 255, 122, 0.35);
+          color: var(--accent);
+        }
+
+        /* RESPONSIVE & REDUCED MOTION */
+        @media (max-width: 900px) {
+          .register-grid {
             grid-template-columns: 1fr;
           }
-          .login-side {
-            display: none;
+
+          .register-left-panel,
+          .register-v-divider {
+            display: none !important;
+          }
+
+          .register-right-panel {
+            padding: 32px 16px;
+            min-height: 100vh;
+          }
+
+          .register-card-box {
+            padding: 30px 22px;
+            max-width: 480px;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .radar-sweep-arm,
+          .radar-ping-circle,
+          .blip-1-dot,
+          .blip-1-halo,
+          .blip-2-dot,
+          .blip-2-halo,
+          .blip-3-dot,
+          .blip-3-halo,
+          .blip-4-dot,
+          .blip-4-halo,
+          .register-stat-value.live::before,
+          .register-status-pill .pulse-dot {
+            animation: none !important;
+          }
+
+          .radar-sweep-arm {
+            transform: rotate(45deg);
+          }
+
+          .blip-1-dot,
+          .blip-2-dot,
+          .blip-3-dot,
+          .blip-4-dot {
+            opacity: 0.8 !important;
+          }
+
+          .blip-1-halo,
+          .blip-2-halo,
+          .blip-3-halo,
+          .blip-4-halo {
+            opacity: 0 !important;
           }
         }
       `}</style>
 
-      <div className="login-shell">
-        {/* Left Side: Hacker Terminal & Live Event Telemetry */}
-        <aside className="login-side" aria-label="Event status">
-          <canvas id="rain-canvas" ref={canvasRef} aria-hidden="true" />
-
-          <div className="login-brand" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <main className="register-grid">
+        {/* ======================================================== */}
+        {/* LEFT PANEL: Tactical Radar & Event Telemetry             */}
+        {/* ======================================================== */}
+        <aside className="register-left-panel" aria-label="Operation Overview">
+          {/* Top Logo */}
+          <Link to="/" className="register-brand" aria-label="websec.ctf home">
             <img
-              src="/logo-icon.png"
+              src="/logo-shield.svg"
               alt="websec.ctf"
-              style={{
-                width: '64px',
-                height: '64px',
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 0 16px rgba(44, 255, 122, 0.45))',
-              }}
+              className="w-7 h-8 flex-shrink-0"
+              style={{ filter: 'drop-shadow(0 0 10px rgba(45, 255, 122, 0.55))' }}
             />
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: 900,
-                  fontSize: '2.2rem',
-                  letterSpacing: '-0.03em',
-                  color: 'var(--text)',
-                  lineHeight: 1.05,
-                }}
-              >
-                websec<span style={{ color: 'var(--accent)' }}>.ctf</span>
-              </span>
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.8125rem',
-                  color: 'var(--accent)',
-                  opacity: 0.9,
-                  letterSpacing: '0.06em',
-                  marginTop: '4px',
-                  fontWeight: 600,
-                }}
-              >
-                &gt; capture the flag ■
-              </span>
-            </div>
+            <span className="register-brand-title">
+              <span className="chromatic-title">websec</span>
+              <span className="accent">.ctf</span>
+            </span>
+          </Link>
+
+          {/* Center: 440x440 Animated Radar SVG */}
+          <div className="register-radar-wrapper" aria-hidden="true">
+            <svg
+              className="register-radar-svg"
+              viewBox="0 0 440 440"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <defs>
+                <radialGradient id="regRadarCenterGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#2dff7a" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#2dff7a" stopOpacity="0" />
+                </radialGradient>
+
+                <linearGradient id="regSweepTrailGrad" x1="100%" y1="0%" x2="0%" y2="80%">
+                  <stop offset="0%" stopColor="#2dff7a" stopOpacity="0.32" />
+                  <stop offset="40%" stopColor="#2dff7a" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="#2dff7a" stopOpacity="0" />
+                </linearGradient>
+
+                <filter id="regNeonGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="2.5" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+              </defs>
+
+              {/* Diagonal Faint Lines */}
+              <line x1="78" y1="78" x2="362" y2="362" stroke="#15241c" strokeWidth="1" />
+              <line x1="78" y1="362" x2="362" y2="78" stroke="#15241c" strokeWidth="1" />
+
+              {/* Concentric Reference Circles */}
+              <circle cx="220" cy="220" r="200" stroke="#1c3024" strokeWidth="1" fill="none" />
+              <circle cx="220" cy="220" r="140" stroke="#1c3024" strokeWidth="1" strokeDasharray="4 6" fill="none" />
+              <circle cx="220" cy="220" r="80" stroke="#1c3024" strokeWidth="1" fill="none" />
+
+              {/* Center Crosshairs */}
+              <line x1="220" y1="12" x2="220" y2="428" stroke="#1a2d21" strokeWidth="1" />
+              <line x1="12" y1="220" x2="428" y2="220" stroke="#1a2d21" strokeWidth="1" />
+
+              {/* Radar Center Ping Ripple */}
+              <circle
+                className="radar-ping-circle"
+                cx="220"
+                cy="220"
+                r="24"
+                stroke="#2dff7a"
+                fill="none"
+              />
+
+              {/* Center Radar Node */}
+              <circle
+                cx="220"
+                cy="220"
+                r="22"
+                stroke="#2dff7a"
+                strokeWidth="1.5"
+                fill="url(#regRadarCenterGlow)"
+                filter="url(#regNeonGlow)"
+              />
+              <circle cx="220" cy="220" r="3" fill="#2dff7a" />
+
+              {/* 4 Synchronized Target Blips */}
+              <g>
+                <circle className="blip-1-halo" cx="298" cy="142" r="3" stroke="#2dff7a" fill="none" />
+                <circle className="blip-1-dot" cx="298" cy="142" r="3" fill="#2dff7a" filter="url(#regNeonGlow)" />
+              </g>
+
+              <g>
+                <circle className="blip-2-halo" cx="359" cy="300" r="3" stroke="#2dff7a" fill="none" />
+                <circle className="blip-2-dot" cx="359" cy="300" r="3" fill="#2dff7a" filter="url(#regNeonGlow)" />
+              </g>
+
+              <g>
+                <circle className="blip-3-halo" cx="128" cy="312" r="3" stroke="#2dff7a" fill="none" />
+                <circle className="blip-3-dot" cx="128" cy="312" r="3" fill="#2dff7a" filter="url(#regNeonGlow)" />
+              </g>
+
+              <g>
+                <circle className="blip-4-halo" cx="160" cy="160" r="3" stroke="#2dff7a" fill="none" />
+                <circle className="blip-4-dot" cx="160" cy="160" r="3" fill="#2dff7a" filter="url(#regNeonGlow)" />
+              </g>
+
+              {/* Rotating Sweep Arm & Trailing Wedge */}
+              <g className="radar-sweep-arm">
+                <path d="M 220 220 L 220 20 A 200 200 0 0 0 66.8 91.4 Z" fill="url(#regSweepTrailGrad)" />
+                <line
+                  x1="220"
+                  y1="220"
+                  x2="220"
+                  y2="20"
+                  stroke="#2dff7a"
+                  strokeWidth="1.75"
+                  filter="url(#regNeonGlow)"
+                />
+              </g>
+            </svg>
           </div>
 
-          <div>
-            <p className="login-flag" aria-hidden="true">
-              {flagText.split(/({|})/).map((part, idx) =>
-                part === '{' || part === '}' ? (
-                  <b key={idx}>{part}</b>
-                ) : (
-                  <React.Fragment key={idx}>{part}</React.Fragment>
-                )
-              )}
-              <span className="blinking-cursor" />
-            </p>
+          {/* Bottom Headline & Live Event Stats */}
+          <div className="register-left-bottom">
+            <h2 className="register-hero-heading">
+              <span className="line-white">Initialize operator.</span>
+              <span className="line-green">Join the operation.</span>
+            </h2>
 
-            <pre className="login-log" aria-hidden="true">
-              {logLines.map((line, idx) => (
-                <div key={idx} dangerouslySetInnerHTML={{ __html: line }} />
-              ))}
-            </pre>
+            <div className="register-stats-row" role="region" aria-label="Event Status Indicators">
+              <div className="register-stat-item">
+                <span className="register-stat-value">{clockTime}</span>
+                <span className="register-stat-label">TIME LEFT</span>
+              </div>
+              <div className="register-stat-item">
+                <span className="register-stat-value live">LIVE</span>
+                <span className="register-stat-label">EVENT STATUS</span>
+              </div>
+            </div>
           </div>
-
-          <dl className="login-status">
-            <div>
-              <dt>event</dt>
-              <dd>
-                <span className="live-dot" />
-                live
-              </dd>
-            </div>
-            <div>
-              <dt>teams online</dt>
-              <dd>142</dd>
-            </div>
-            <div>
-              <dt>time left</dt>
-              <dd id="clock">{clockTime}</dd>
-            </div>
-          </dl>
         </aside>
 
-        {/* Right Side: Registration Panel */}
-        <main className="login-main">
-          <div className="login-card">
-            <div style={{ marginBottom: '24px' }}>
-              <img
-                src="/logo-full.png"
-                alt="websec.ctf"
-                style={{
-                  height: '54px',
-                  maxWidth: '300px',
-                  objectFit: 'contain',
-                  filter: 'drop-shadow(0 0 16px rgba(44, 255, 122, 0.25))',
-                }}
-              />
+        {/* 1px Vertical Divider */}
+        <div className="register-v-divider" role="separator" aria-orientation="vertical" />
+
+        {/* ======================================================== */}
+        {/* RIGHT PANEL: Registration Form & Cyber Card             */}
+        {/* ======================================================== */}
+        <section className="register-right-panel" aria-labelledby="register-heading">
+          <div className="register-card-box">
+            {/* Top Brand inside Card */}
+            <div className="register-card-brand-row">
+              <Link to="/" className="register-brand" aria-label="websec.ctf home">
+                <img
+                  src="/logo-shield.svg"
+                  alt="websec.ctf"
+                  className="w-7 h-8 flex-shrink-0"
+                  style={{ filter: 'drop-shadow(0 0 10px rgba(45, 255, 122, 0.55))' }}
+                />
+                <span className="register-brand-title">
+                  <span className="chromatic-title">websec</span>
+                  <span className="accent">.ctf</span>
+                </span>
+              </Link>
             </div>
-            <h1 className="login-h1">register player</h1>
-            <p className="login-sub">
-              Create a new cybersecurity training account to solve challenges and climb the scoreboard.
-            </p>
+
+            {/* Form Header */}
+            <header className="register-form-header">
+              <span className="register-kicker">// NEW OPERATOR COMMISSION</span>
+              <h1 id="register-heading" className="register-form-title">
+                Register player
+              </h1>
+              <p className="register-form-subtitle">
+                Create a new cybersecurity training account to solve challenges and climb the scoreboard.
+              </p>
+            </header>
 
             {/* Error Message Box */}
             {errorMessage && (
-              <div className="login-error" role="alert">
-                <AlertCircle className="w-4 h-4 inline mr-2 align-text-bottom" />
+              <div className="register-alert-box register-alert-error" role="alert">
                 {errorMessage}
               </div>
             )}
 
             {/* Success Message Box */}
             {successMessage && (
-              <div className="login-success" role="status">
-                <Check className="w-4 h-4 inline mr-2 align-text-bottom" />
+              <div className="register-alert-box register-alert-success" role="status">
                 {successMessage}
               </div>
             )}
 
+            {/* Registration Form */}
             <form onSubmit={handleSubmit} noValidate>
-              {/* Username Field */}
-              <div className="login-field">
-                <label className="login-label" htmlFor="reg-username">
-                  Username <span className="text-emerald-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="reg-username"
-                  name="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  placeholder="e.g. shadow_hacker"
-                  className="login-input"
-                  required
-                />
-              </div>
-
-              {/* Email Field */}
-              <div className="login-field">
-                <label className="login-label" htmlFor="reg-email">
-                  Email Address <span className="text-emerald-400">*</span>
-                </label>
-                <input
-                  type="email"
-                  id="reg-email"
-                  name="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                  spellCheck={false}
-                  placeholder="you@domain.com"
-                  className="login-input"
-                  required
-                />
-              </div>
-
-              {/* Password Field */}
-              <div className="login-field">
-                <label className="login-label" htmlFor="reg-pw">
-                  Password <span className="text-emerald-400">*</span>
-                </label>
-                <div className="login-input-wrap">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    id="reg-pw"
-                    name="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="new-password"
-                    placeholder="Min 8 chars, letter & number"
-                    className="login-input"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="login-toggle"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm Password Field */}
-              <div className="login-field">
-                <label className="login-label" htmlFor="reg-pw-confirm">
-                  Confirm Password <span className="text-emerald-400">*</span>
-                </label>
-                <div className="login-input-wrap">
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    id="reg-pw-confirm"
-                    name="confirmPassword"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    autoComplete="new-password"
-                    placeholder="Re-enter your password"
-                    className="login-input"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="login-toggle"
-                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Real-time Checklist */}
-              {password.length > 0 && (
-                <div className="req-list">
-                  <div className={`req-item ${hasMinLength ? 'valid' : ''}`}>
-                    {hasMinLength ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                    8+ Characters
-                  </div>
-                  <div className={`req-item ${hasLetter ? 'valid' : ''}`}>
-                    {hasLetter ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                    Contains Letter
-                  </div>
-                  <div className={`req-item ${hasNumber ? 'valid' : ''}`}>
-                    {hasNumber ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                    Contains Number
-                  </div>
-                  <div className={`req-item ${passwordsMatch ? 'valid' : ''}`}>
-                    {passwordsMatch ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                    Passwords Match
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Username Field */}
+                <div className="register-field-group">
+                  <label htmlFor="reg-username" className="register-field-label">
+                    Username <span className="req">*</span>
+                  </label>
+                  <div className="register-input-wrapper">
+                    <input
+                      type="text"
+                      id="reg-username"
+                      name="username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      autoComplete="username"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      placeholder="e.g. shadow_hacker"
+                      className="register-text-input"
+                      required
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* Anime Persona Avatar Picker */}
-              <div className="login-field" style={{ marginTop: '16px', marginBottom: '20px' }}>
-                <AvatarPicker
-                  value={selectedAvatar}
-                  onChange={(url) => setSelectedAvatar(url)}
-                  label="Select Starting Anime Persona"
-                  description="Choose your cyber hacker avatar. Can be updated anytime in Profile."
-                />
+                {/* Email Address Field */}
+                <div className="register-field-group">
+                  <label htmlFor="reg-email" className="register-field-label">
+                    Email Address <span className="req">*</span>
+                  </label>
+                  <div className="register-input-wrapper">
+                    <input
+                      type="email"
+                      id="reg-email"
+                      name="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="email"
+                      spellCheck={false}
+                      placeholder="you@domain.com"
+                      className="register-text-input"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Password Field */}
+                <div className="register-field-group">
+                  <label htmlFor="reg-pw" className="register-field-label">
+                    Password <span className="req">*</span>
+                  </label>
+                  <div className="register-input-wrapper">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      id="reg-pw"
+                      name="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="new-password"
+                      placeholder="Min 8 chars, letter & number"
+                      className="register-text-input has-toggle"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="register-show-toggle"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm Password Field */}
+                <div className="register-field-group">
+                  <label htmlFor="reg-pw-confirm" className="register-field-label">
+                    Confirm Password <span className="req">*</span>
+                  </label>
+                  <div className="register-input-wrapper">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      id="reg-pw-confirm"
+                      name="confirmPassword"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      autoComplete="new-password"
+                      placeholder="Re-enter your password"
+                      className="register-text-input has-toggle"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="register-show-toggle"
+                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Real-time Checklist */}
+                {password.length > 0 && (
+                  <div className="register-req-grid" aria-live="polite">
+                    <div className={`register-req-item ${hasMinLength ? 'valid' : ''}`}>
+                      {hasMinLength ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5 text-zinc-500" />}
+                      8+ Characters
+                    </div>
+                    <div className={`register-req-item ${hasLetter ? 'valid' : ''}`}>
+                      {hasLetter ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5 text-zinc-500" />}
+                      Contains Letter
+                    </div>
+                    <div className={`register-req-item ${hasNumber ? 'valid' : ''}`}>
+                      {hasNumber ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5 text-zinc-500" />}
+                      Contains Number
+                    </div>
+                    <div className={`register-req-item ${passwordsMatch ? 'valid' : ''}`}>
+                      {passwordsMatch ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5 text-zinc-500" />}
+                      Passwords Match
+                    </div>
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  className="register-submit-btn"
+                  id="submit"
+                  disabled={isLoading}
+                >
+                  <span>{isLoading ? 'COMMISSIONING OPERATOR...' : 'REGISTER ACCOUNT →'}</span>
+                </button>
               </div>
-
-              {/* Submit Button */}
-              <button
-                className="login-btn"
-                id="submit"
-                type="submit"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Creating Account…' : '> Register Account'}
-              </button>
             </form>
 
-            {/* Link to Login */}
-            <p className="login-sub" style={{ margin: '24px 0 0' }}>
-              Already have an account?{' '}
-              <Link to="/login" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
-                Sign in here
-              </Link>
-            </p>
+            {/* Navigation Link to Login */}
+            <nav className="register-link-group" aria-label="Alternative entry paths">
+              <p>
+                Already have an account?{' '}
+                <Link to="/login" className="register-accent-link">
+                  Sign in here →
+                </Link>
+              </p>
+            </nav>
 
-            <p className="login-foot">
-              Registration assigns a standard player account. Public registration cannot grant administrator privileges.
-            </p>
+            {/* Divider & Disclaimer */}
+            <hr className="register-divider" />
+
+            <div className="register-disclaimer-box">
+              <p className="register-disclaimer-text">
+                Registration assigns a standard player account. Public registration cannot grant administrator privileges.
+              </p>
+            </div>
           </div>
-        </main>
-      </div>
+        </section>
+      </main>
     </div>
   );
 };

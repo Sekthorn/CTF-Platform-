@@ -16,6 +16,7 @@ import { handleCmdInjectionTarget } from './targets/command-injection.targets';
 import { handleJwtTarget } from './targets/jwt.targets';
 import { handleBusinessLogicTarget } from './targets/business-logic.targets';
 import { handleDeserializationTarget } from './targets/deserialization.targets';
+import { handleFoundationsTarget } from './targets/foundations.targets';
 
 @ApiTags('Challenge Target Microservices')
 @Controller('targets')
@@ -206,6 +207,34 @@ export class TargetsController {
     const actualSubpath = rawSubpath ? rawSubpath.replace(/\/+/g, '/') : '';
     const categorySlug = challenge.category?.slug || '';
     const method = req.method.toUpperCase();
+
+    // -----------------------------------------------------------------------
+    // Category: Web Security Fundamentals (Foundations)
+    // -----------------------------------------------------------------------
+    if (
+      categorySlug === 'foundations' ||
+      challenge.slug.endsWith('-lab') &&
+        [
+          'http2-header-semantics-lab',
+          'http-method-verb-safety-lab',
+          'owasp-top10-taxonomy-lab',
+          'tls-https-transport-basics-lab',
+          'same-origin-policy-boundaries-lab',
+          'cors-preflight-trust-flaws-lab',
+          'rfc6265-cookie-flags-lab',
+          'browser-storage-session-basics-lab',
+          'web-proxy-interception-lab',
+          'owasp-threat-modeling-a00-lab',
+        ].includes(challenge.slug)
+    ) {
+      return handleFoundationsTarget(
+        challenge.slug,
+        actualSubpath,
+        req,
+        res,
+        rawFlag,
+      );
+    }
 
     // -----------------------------------------------------------------------
     // Category: Insecure Direct Object Reference (IDOR)

@@ -53,6 +53,9 @@
   body {
     @apply bg-cyber-bg text-cyber-text;
     font-feature-settings: "rlig" 1, "calt" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
 }
@@ -71,4 +74,19 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #22C55E40;
+}
+
+/* Scrollbar utilities for compact horizontal strips */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Performance optimization for high-density challenge and card lists */
+.card-render-optimized {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 180px;
 }

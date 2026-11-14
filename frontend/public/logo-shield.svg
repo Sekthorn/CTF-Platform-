@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 35" fill="none">
+  <defs>
+    <filter id="neonShieldGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <g filter="url(#neonShieldGlow)">
+    <path d="M15 3.5 C19 5.5 24 6.8 27.5 8.2 C27.5 19.5 23.5 25.5 15 31.5 C6.5 25.5 2.5 19.5 2.5 8.2 C6 6.8 11 5.5 15 3.5 Z" 
+          stroke="#2dff7a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="rgba(45,255,122,0.08)" />
+    <path d="M9.5 13 L14.5 17 L9.5 21" stroke="#2dff7a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+    <line x1="16" y1="21" x2="20.5" y2="21" stroke="#2dff7a" stroke-width="2.2" stroke-linecap="round" />
+  </g>
+</svg>

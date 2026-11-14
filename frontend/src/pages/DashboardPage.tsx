@@ -22,31 +22,64 @@ import { mockLearningPaths } from '@/data/mock/learningPaths';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '@/services/api';
 
+// Lightweight memory cache to eliminate redundant API refetches on route transitions
+let dashboardCache: {
+  stats: { challengesCompleted: number; totalChallenges: number; totalPoints: number; totalUsers?: number };
+  recommendedChallenges: any[];
+  solvedChallenges: any[];
+  timestamp: number;
+} | null = null;
+const CACHE_TTL_MS = 30000; // 30 seconds
+
 export const DashboardPage: React.FC = () => {
   const { user, admin } = useAuth();
   const currentUser = user || admin;
 
-  const [stats, setStats] = useState({
-    challengesCompleted: 0,
-    totalChallenges: 63,
-    totalPoints: 0,
+  const [stats, setStats] = useState(() => {
+    if (dashboardCache && Date.now() - dashboardCache.timestamp < CACHE_TTL_MS) {
+      return dashboardCache.stats;
+    }
+    return {
+      challengesCompleted: 0,
+      totalChallenges: 63,
+      totalPoints: 0,
+    };
   });
 
-  const [recommendedChallenges, setRecommendedChallenges] = useState<any[]>([]);
-  const [solvedChallenges, setSolvedChallenges] = useState<any[]>([]);
+  const [recommendedChallenges, setRecommendedChallenges] = useState<any[]>(() => {
+    if (dashboardCache && Date.now() - dashboardCache.timestamp < CACHE_TTL_MS) {
+      return dashboardCache.recommendedChallenges;
+    }
+    return [];
+  });
+  const [solvedChallenges, setSolvedChallenges] = useState<any[]>(() => {
+    if (dashboardCache && Date.now() - dashboardCache.timestamp < CACHE_TTL_MS) {
+      return dashboardCache.solvedChallenges;
+    }
+    return [];
+  });
 
   useEffect(() => {
+    // If cache is fresh, skip redundant network fetch
+    if (dashboardCache && Date.now() - dashboardCache.timestamp < CACHE_TTL_MS) {
+      return;
+    }
+
     // 1. Fetch live user stats
     apiClient
       .get('/users/me')
       .then((res) => {
         const u = res.data?.data || res.data;
         if (u) {
-          setStats((prev) => ({
-            ...prev,
-            challengesCompleted: u.solvedCount || 0,
-            totalPoints: u.totalPoints || 0,
-          }));
+          setStats((prev) => {
+            const updated = {
+              ...prev,
+              challengesCompleted: u.solvedCount || 0,
+              totalPoints: u.totalPoints || 0,
+            };
+            if (dashboardCache) dashboardCache.stats = updated;
+            return updated;
+          });
         }
       })
       .catch(() => {});
@@ -57,20 +90,33 @@ export const DashboardPage: React.FC = () => {
       .then((res) => {
         const items = res.data?.data?.items || res.data?.items;
         if (Array.isArray(items) && items.length > 0) {
-          setStats((prev) => ({ ...prev, totalChallenges: items.length }));
           const solved = items.filter(
             (c: any) => c.userProgress?.status === 'SOLVED' || c.isSolved
           );
           const unsolved = items.filter(
             (c: any) => c.userProgress?.status !== 'SOLVED' && !c.isSolved
           );
-          setSolvedChallenges(solved.slice(0, 5));
-          setRecommendedChallenges(unsolved.slice(0, 3));
+          const topSolved = solved.slice(0, 5);
+          const topRecommended = unsolved.slice(0, 3);
+          setSolvedChallenges(topSolved);
+          setRecommendedChallenges(topRecommended);
+          setStats((prev) => {
+            const updated = { ...prev, totalChallenges: items.length };
+            dashboardCache = {
+              stats: updated,
+              recommendedChallenges: topRecommended,
+              solvedChallenges: topSolved,
+              timestamp: Date.now(),
+            };
+            return updated;
+          });
         } else {
           const solved = mockChallenges.filter((c) => c.solved);
           const unsolved = mockChallenges.filter((c) => !c.solved);
-          setSolvedChallenges(solved.slice(0, 5));
-          setRecommendedChallenges(unsolved.slice(0, 3));
+          const topSolved = solved.slice(0, 5);
+          const topRecommended = unsolved.slice(0, 3);
+          setSolvedChallenges(topSolved);
+          setRecommendedChallenges(topRecommended);
         }
       })
       .catch(() => {
@@ -112,18 +158,18 @@ export const DashboardPage: React.FC = () => {
   ).length;
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-4 sm:space-y-5 font-sans">
       {/* 1. Welcome Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyber-card via-cyber-card to-cyber-elevated border border-cyber-border p-6 md:p-8 shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyber-card via-cyber-card to-cyber-elevated border border-cyber-border p-4 sm:p-5 md:p-6 shadow-xl">
         <div className="absolute right-0 top-0 -mt-10 -mr-10 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center space-x-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-mono">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] font-mono">
               <Zap className="w-3.5 h-3.5" />
               <span>Exploitation Arena Active</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-cyber-text tracking-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-cyber-text tracking-tight">
               Welcome back, <span className="text-emerald-400 font-mono">{currentUser?.username || 'Researcher'}</span>
             </h1>
             <p className="text-xs md:text-sm text-cyber-muted leading-relaxed">
@@ -134,16 +180,16 @@ export const DashboardPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             <Link to="/challenges">
-              <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs h-9 px-4 shadow-lg shadow-emerald-950/40">
-                <Target className="mr-2 h-4 w-4" />
+              <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs h-8.5 px-3.5 shadow-lg shadow-emerald-950/40">
+                <Target className="mr-1.5 h-3.5 w-3.5" />
                 Browse Challenges
               </Button>
             </Link>
             <Link to="/learning-paths">
-              <Button variant="outline" className="border-cyber-border bg-cyber-elevated/60 hover:bg-cyber-elevated text-xs h-9 px-4 text-cyber-text">
-                <Compass className="mr-2 h-4 w-4 text-emerald-400" />
+              <Button variant="outline" className="border-cyber-border bg-cyber-elevated/60 hover:bg-cyber-elevated text-xs h-8.5 px-3.5 text-cyber-text">
+                <Compass className="mr-1.5 h-3.5 w-3.5 text-emerald-400" />
                 Learning Paths
               </Button>
             </Link>

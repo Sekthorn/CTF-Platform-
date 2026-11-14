@@ -14,6 +14,7 @@ import {
   Users,
   BookOpen,
   TrendingUp,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -46,8 +47,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { user, admin, logout, isAdmin } = useAuth();
   const currentUser = user || admin;
 
-  const [challengeCount, setChallengeCount] = useState<number>(63);
-  const [knowledgeCount, setKnowledgeCount] = useState<number>(63);
+  const [challengeCount, setChallengeCount] = useState<number | null>(null);
+  const [knowledgeCount, setKnowledgeCount] = useState<number | null>(null);
 
   // Floating Cyber Tooltip State for Collapsed Mode
   const [hoveredTooltip, setHoveredTooltip] = useState<{
@@ -84,10 +85,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [collapsed]);
 
   useEffect(() => {
+    let active = true;
+
     apiClient
       .get('/challenges', { params: { limit: 1 } })
       .then((res) => {
-        const total = res.data?.data?.pagination?.total ?? res.data?.pagination?.total;
+        if (!active) return;
+        const total =
+          res.data?.data?.pagination?.total ??
+          res.data?.pagination?.total ??
+          res.data?.data?.meta?.total ??
+          res.data?.meta?.total;
         if (typeof total === 'number' && total > 0) {
           setChallengeCount(total);
         }
@@ -95,11 +103,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       .catch(() => {});
 
     apiClient
-      .get('/knowledge', { params: { limit: 1 } })
+      .get('/knowledge/lessons', { params: { limit: 1 } })
       .then((res) => {
+        if (!active) return;
         const total =
+          res.data?.data?.meta?.total ??
+          res.data?.meta?.total ??
           res.data?.data?.pagination?.total ??
           res.data?.pagination?.total ??
+          (Array.isArray(res.data?.data?.items) ? res.data.data.items.length : null) ??
+          (Array.isArray(res.data?.items) ? res.data.items.length : null) ??
           (Array.isArray(res.data?.data) ? res.data.data.length : null) ??
           (Array.isArray(res.data) ? res.data.length : null);
         if (typeof total === 'number' && total > 0) {
@@ -107,19 +120,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }
       })
       .catch(() => {});
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const platformItems: NavItem[] = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { label: 'Challenges', path: '/challenges', icon: Flag, badge: String(challengeCount) },
-    { label: 'Security Knowledge', path: '/knowledge', icon: BookOpen, badge: String(knowledgeCount) },
+    {
+      label: 'Challenges',
+      path: '/challenges',
+      icon: Flag,
+      ...(challengeCount !== null ? { badge: String(challengeCount) } : {}),
+    },
+    {
+      label: 'Security Knowledge',
+      path: '/knowledge',
+      icon: BookOpen,
+      ...(knowledgeCount !== null ? { badge: String(knowledgeCount) } : {}),
+    },
     { label: 'Learning Progress', path: '/learning-progress', icon: TrendingUp },
   ];
 
   const adminItems: NavItem[] = [
     { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-    { label: 'Challenges', path: '/admin/challenges', icon: Flag, badge: String(challengeCount) },
-    { label: 'Knowledge Admin', path: '/admin/knowledge', icon: BookOpen, badge: String(knowledgeCount) },
+    {
+      label: 'Challenges',
+      path: '/admin/challenges',
+      icon: Flag,
+      ...(challengeCount !== null ? { badge: String(challengeCount) } : {}),
+    },
+    {
+      label: 'Knowledge Admin',
+      path: '/admin/knowledge',
+      icon: BookOpen,
+      ...(knowledgeCount !== null ? { badge: String(knowledgeCount) } : {}),
+    },
+    { label: 'Roadmap Inspector', path: '/learning-progress', icon: TrendingUp, badge: 'ADMIN' },
   ];
 
   if (isAdmin) {
@@ -127,10 +165,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }
 
   const platformOverviewItems: NavItem[] = [
-    ...(isAdmin ? [{ label: 'Security Knowledge', path: '/knowledge', icon: BookOpen }] : []),
+    ...(isAdmin
+      ? [
+          {
+            label: 'Security Knowledge',
+            path: '/knowledge',
+            icon: BookOpen,
+            ...(knowledgeCount !== null ? { badge: String(knowledgeCount) } : {}),
+          },
+        ]
+      : []),
     { label: 'Learning Paths', path: '/learning-paths', icon: Compass },
     { label: 'Scoreboard', path: '/leaderboard', icon: Trophy },
     { label: 'Achievements', path: '/achievements', icon: Award },
+    { label: 'Documentation', path: '/docs', icon: FileText },
   ];
 
   const sections: NavSection[] = [

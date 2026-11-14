@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  target-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: websec-challenge/{{CHALLENGE_SLUG}}:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+      - /run:rw,noexec,nosuid,size=16m
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+    networks:
+      - challenge-isolated-net
+    ports:
+      - "127.0.0.1:{{ASSIGNED_HOST_PORT}}:80"
+
+networks:
+  challenge-isolated-net:
+    driver: bridge
+    internal: true # Block outbound internet access to prevent SSRF abuse

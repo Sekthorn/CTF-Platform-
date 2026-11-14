@@ -215,6 +215,10 @@ export const ChallengeWorkspacePage: React.FC = () => {
   // High-level methodology guidance by vulnerability category (general, without spoiling exploit details)
   const getCategoryGuideline = (category: string) => {
     const cat = (category || '').toLowerCase();
+    if (cat.includes('foundations') || cat.includes('fundamentals')) {
+      return 'Inspect HTTP requests/responses, security headers (HSTS, Set-Cookie, Allow, CORS Origin reflection), browser storage boundaries, and OWASP/CVSS risk classifications using DevTools Network tab, curl -i, or an intercepting proxy.';
+    }
+
     if (cat.includes('auth') || cat.includes('access')) {
       return 'Inspect how user permissions, 2FA validation, session states, and role checks are performed. Intercept authentication requests and analyze whether the application relies on client-side status codes or unverified trust states.';
     }
@@ -236,6 +240,7 @@ export const ChallengeWorkspacePage: React.FC = () => {
     if (cat.includes('ssrf') || cat.includes('forgery')) {
       return 'Locate endpoints fetching remote URLs or webhooks. Probe internal network interfaces (127.0.0.1, localhost) and simulated cloud metadata endpoints using IP representation and schema bypasses.';
     }
+
     if (cat.includes('command') || cat.includes('cmd')) {
       return 'Identify diagnostics, ping tools, or system utilities that pass user input to shell interpreters. Inject shell command separators (;, &&, |) and evade character filters using environment variables ($IFS).';
     }
@@ -275,6 +280,29 @@ export const ChallengeWorkspacePage: React.FC = () => {
           name: 'Flag Extraction',
           color: 'amber',
           desc: 'Forward the modified response to fool client-side navigation and access the dashboard flag.',
+        },
+      ];
+    }
+
+    if (cat.includes('foundations') || cat.includes('fundamentals')) {
+      return [
+        {
+          num: 1,
+          name: 'Inspect HTTP & Origins',
+          color: 'emerald',
+          desc: 'Request the target endpoint with Browser DevTools (Network) or curl -i to inspect status codes, headers, and cookies.',
+        },
+        {
+          num: 2,
+          name: 'Probe Policy Boundaries',
+          color: 'cyan',
+          desc: 'Test HTTP verbs (OPTIONS/PUT), Origin reflection, SameSite/HttpOnly flags, SOP tuples, or HSTS headers.',
+        },
+        {
+          num: 3,
+          name: 'Verify & Capture Flag',
+          color: 'amber',
+          desc: 'Submit the verified security finding or tampered proxy payload to obtain and capture the flag.',
         },
       ];
     }
@@ -542,6 +570,10 @@ export const ChallengeWorkspacePage: React.FC = () => {
       return ['Burp Suite (Interception)', 'DevTools (Network)', 'curl', 'Postman', 'Python'];
     }
 
+    if (cat.includes('foundations') || cat.includes('fundamentals')) {
+      return ['Browser DevTools (Network/Storage)', 'curl -i / --http2', 'Burp Suite Repeater', 'OWASP ZAP', 'CyberChef'];
+    }
+
     if (cat.includes('command') || cat.includes('cmd')) {
       return ['curl', 'Burp Repeater', 'Bash / sh', 'Netcat', 'CyberChef'];
     }
@@ -737,11 +769,11 @@ export const ChallengeWorkspacePage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-5 font-sans pb-12">
+    <div className="space-y-4 md:space-y-5 font-sans pb-12">
       {/* ======================================================== */}
       {/* TOP HEADER: Breadcrumbs & Challenge Meta                 */}
       {/* ======================================================== */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cyber-border/70 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-cyber-border/70 pb-3">
         <div className="flex items-center space-x-3">
           <Link
             to="/challenges"
@@ -780,11 +812,11 @@ export const ChallengeWorkspacePage: React.FC = () => {
       {/* ======================================================== */}
       {/* 2-COLUMN STANDARD CTF WORKSPACE LAYOUT                   */}
       {/* ======================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
         {/* ======================================================== */}
         {/* LEFT COLUMN (Wide): Scenario, Hints, Post-Solve Lesson   */}
         {/* ======================================================== */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-5">
+        <div className="lg:col-span-7 xl:col-span-8 space-y-4 md:space-y-5">
           {/* 1. Challenge Scenario Card */}
           <div className="rounded-xl border border-cyber-border bg-cyber-card p-5 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-cyber-border/60 pb-3">
@@ -1032,10 +1064,10 @@ export const ChallengeWorkspacePage: React.FC = () => {
         {/* ======================================================== */}
         {/* RIGHT COLUMN (Narrow): Target Info, Flag Submit, Logs    */}
         {/* ======================================================== */}
-        <div className="lg:col-span-5 xl:col-span-4 space-y-5">
+        <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:sticky lg:top-4">
           {/* 1. Target Information Card (Replaces Vulnerable Target Environment) */}
-          <div className="rounded-xl border border-cyber-border bg-cyber-card p-5 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-cyber-border/60 pb-3">
+          <div className="rounded-xl border border-cyber-border bg-cyber-card p-4 sm:p-5 space-y-3 sm:space-y-3.5 shadow-sm">
+            <div className="flex items-center justify-between border-b border-cyber-border/60 pb-2.5">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                 <h3 className="text-xs font-mono font-bold text-cyber-text uppercase tracking-wider">
@@ -1049,24 +1081,24 @@ export const ChallengeWorkspacePage: React.FC = () => {
             </div>
 
             {/* Host and Port displayed separately in monospace */}
-            <div className="space-y-2.5 font-mono text-xs">
+            <div className="space-y-2 font-mono text-xs">
               <div className="grid grid-cols-2 gap-2">
-                <div className="p-3 rounded-lg bg-cyber-bg border border-cyber-border">
+                <div className="p-2 sm:p-2.5 rounded-lg bg-cyber-bg border border-cyber-border">
                   <span className="text-[10px] text-cyber-muted block mb-0.5 font-sans">Host</span>
-                  <span className="text-emerald-400 font-bold select-all tracking-wider">
+                  <span className="text-emerald-400 font-bold select-all tracking-wider text-xs sm:text-sm">
                     {targetHost}
                   </span>
                 </div>
-                <div className="p-3 rounded-lg bg-cyber-bg border border-cyber-border">
+                <div className="p-2 sm:p-2.5 rounded-lg bg-cyber-bg border border-cyber-border">
                   <span className="text-[10px] text-cyber-muted block mb-0.5 font-sans">Port</span>
-                  <span className="text-emerald-400 font-bold select-all tracking-wider">
+                  <span className="text-emerald-400 font-bold select-all tracking-wider text-xs sm:text-sm">
                     {targetPort}
                   </span>
                 </div>
               </div>
 
               {/* Target Endpoint Base Path */}
-              <div className="p-2.5 rounded-lg bg-cyber-bg border border-cyber-border space-y-1">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-cyber-bg border border-cyber-border space-y-0.5">
                 <span className="text-[10px] text-cyber-muted block font-sans">
                   Target Endpoint Path
                 </span>
@@ -1077,7 +1109,7 @@ export const ChallengeWorkspacePage: React.FC = () => {
 
               {/* Opaque instance token (if assigned, no username exposed) */}
               {instanceId && (
-                <div className="p-2.5 rounded-lg bg-cyber-bg/70 border border-cyber-border/80">
+                <div className="p-2 sm:p-2.5 rounded-lg bg-cyber-bg/70 border border-cyber-border/80">
                   <span className="text-[10px] text-cyber-muted block mb-0.5 font-sans">
                     Target Instance Token
                   </span>
@@ -1088,12 +1120,12 @@ export const ChallengeWorkspacePage: React.FC = () => {
               )}
 
               {/* Action Buttons: Copy Target URL and Copy Host:Port */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 pt-0.5">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCopyTargetUrl}
-                  className="w-full border-cyber-border hover:bg-cyber-elevated text-cyber-text font-mono text-[11px] h-9 flex items-center justify-center gap-1.5"
+                  className="w-full border-cyber-border hover:bg-cyber-elevated text-cyber-text font-mono text-[11px] h-8.5 flex items-center justify-center gap-1.5"
                 >
                   {copiedTargetUrl ? (
                     <>
@@ -1112,7 +1144,7 @@ export const ChallengeWorkspacePage: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={handleCopyHostPort}
-                  className="w-full border-cyber-border hover:bg-cyber-elevated text-cyber-text font-mono text-[11px] h-9 flex items-center justify-center gap-1.5"
+                  className="w-full border-cyber-border hover:bg-cyber-elevated text-cyber-text font-mono text-[11px] h-8.5 flex items-center justify-center gap-1.5"
                 >
                   {copiedHostPort ? (
                     <>
@@ -1129,14 +1161,14 @@ export const ChallengeWorkspacePage: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-[11px] text-cyber-muted/90 text-center font-mono">
+            <p className="text-[10px] sm:text-[11px] text-cyber-muted/90 text-center font-mono">
               Attack this target using your own tools.
             </p>
           </div>
 
           {/* 2. Capture the Flag Card */}
           <div
-            className={`rounded-xl border p-5 space-y-4 shadow-sm transition-all duration-500 ${
+            className={`rounded-xl border p-4 sm:p-5 space-y-3 sm:space-y-3.5 shadow-sm transition-all duration-500 ${
               challenge.solved
                 ? 'border-emerald-500/50 bg-gradient-to-br from-cyber-card to-emerald-950/25 shadow-[0_0_25px_rgba(34,197,94,0.18)]'
                 : 'border-cyber-border bg-cyber-card'

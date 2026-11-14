@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   Menu,
@@ -13,10 +13,13 @@ import {
   Zap,
   Shield,
   LogOut,
+  X,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { DifficultyBadge } from '@/components/ui/DifficultyBadge';
 import { useAuth } from '@/context/AuthContext';
 import { UserAvatar } from '@/components/common/UserAvatar';
+import { mockChallenges } from '@/data/mock/challenges';
 
 interface TopbarProps {
   onOpenMobileNav: () => void;
@@ -30,9 +33,11 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenMobileNav }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -43,10 +48,46 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenMobileNav }) => {
       if (userRef.current && !userRef.current.contains(e.target as Node)) {
         setShowUserMenu(false);
       }
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close search on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsSearchOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Live matching challenges
+  const searchResults = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return [];
+    return mockChallenges
+      .filter((c) => {
+        const cat =
+          typeof c.category === 'string'
+            ? c.category
+            : (c.category as any)?.name || '';
+        return (
+          c.title.toLowerCase().includes(q) ||
+          c.shortDescription?.toLowerCase().includes(q) ||
+          c.owaspReference?.toLowerCase().includes(q) ||
+          c.cweReference?.toLowerCase().includes(q) ||
+          cat.toLowerCase().includes(q) ||
+          c.tags?.some((t) => t.toLowerCase().includes(q))
+        );
+      })
+      .slice(0, 6);
+  }, [searchQuery]);
 
   const getPageContext = (pathname: string) => {
     if (pathname.startsWith('/challenges/') || pathname.startsWith('/admin/challenges/')) {
@@ -91,12 +132,18 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenMobileNav }) => {
 
   const { title, subtitle } = getPageContext(location.pathname);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/challenges?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
+      setIsSearchOpen(false);
     }
+  };
+
+  const handleSelectChallenge = (slug: string) => {
+    navigate(`/challenges/${slug}`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
   };
 
   return (
@@ -128,16 +175,98 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenMobileNav }) => {
 
       {/* Right: Search, Notifications & Profile */}
       <div className="flex items-center space-x-3">
-        {/* Search */}
-        <form onSubmit={handleSearchSubmit} className="relative hidden sm:block w-48 md:w-64">
-          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-cyber-muted" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search challenges or CWE..."
-            className="pl-8 text-xs h-9 bg-cyber-card border-cyber-border text-cyber-text placeholder:text-cyber-muted/60 focus-visible:ring-emerald-500/50"
-          />
-        </form>
+        {/* Search Bar with Live Cyber Dropdown */}
+        <div ref={searchRef} className="relative hidden sm:block w-48 sm:w-60 md:w-72 lg:w-80">
+          <form onSubmit={handleSearchSubmit} className="relative w-full">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-cyber-muted pointer-events-none" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsSearchOpen(true);
+              }}
+              onFocus={() => {
+                if (searchQuery.trim()) setIsSearchOpen(true);
+              }}
+              placeholder="Search challenges or CWE..."
+              className="pl-8 pr-8 text-xs h-9 bg-cyber-card border-cyber-border text-cyber-text placeholder:text-cyber-muted/60 focus-visible:ring-emerald-500/50 rounded-lg w-full"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setIsSearchOpen(false);
+                }}
+                className="absolute right-2.5 top-2.5 text-cyber-muted hover:text-cyber-text transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </form>
+
+          {/* Live Search Results Popup */}
+          {isSearchOpen && searchQuery.trim().length >= 1 && (
+            <div className="absolute top-full mt-2 right-0 w-80 md:w-96 rounded-xl border border-cyber-border bg-cyber-card/95 backdrop-blur-xl shadow-2xl z-50 overflow-hidden divide-y divide-cyber-border/60">
+              <div className="px-3.5 py-2 bg-cyber-bg/80 flex items-center justify-between text-[10px] font-mono text-cyber-muted">
+                <span>MATCHING CHALLENGES</span>
+                <span>{searchResults.length} shown</span>
+              </div>
+
+              <div className="max-h-72 overflow-y-auto divide-y divide-cyber-border/40">
+                {searchResults.length > 0 ? (
+                  searchResults.map((c) => (
+                    <div
+                      key={c.id}
+                      onClick={() => handleSelectChallenge(c.slug)}
+                      className="p-2.5 sm:p-3 hover:bg-cyber-elevated/70 cursor-pointer transition-colors flex items-start justify-between gap-3 group"
+                    >
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-bold text-cyber-text group-hover:text-emerald-400 transition-colors line-clamp-1">
+                            {c.title}
+                          </span>
+                          <DifficultyBadge difficulty={c.difficulty} />
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] font-mono text-cyber-muted truncate">
+                          <span>{typeof c.category === 'object' && c.category !== null ? (c.category as any).name : c.category}</span>
+                          {c.cweReference && (
+                            <>
+                              <span>•</span>
+                              <span className="text-cyan-400 font-semibold">{c.cweReference}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-mono font-bold text-emerald-400">
+                          +{c.points}
+                        </span>
+                        <span className="text-[9px] text-cyber-muted block font-mono">PTS</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center space-y-1 text-xs">
+                    <p className="text-cyber-muted">No challenges matching "{searchQuery}"</p>
+                    <p className="text-[10px] text-cyber-muted/60 font-mono">
+                      Try searching by CWE (e.g. CWE-89) or vulnerability name.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div
+                onClick={() => handleSearchSubmit()}
+                className="px-3.5 py-2.5 bg-cyber-bg/90 hover:bg-cyber-elevated text-center text-xs font-mono text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors flex items-center justify-center gap-1.5"
+              >
+                <span>View all results in Challenges</span>
+                <span>→</span>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Notifications Dropdown */}
         <div className="relative" ref={notifRef}>

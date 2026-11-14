@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { apiClient } from '@/services/api';
 import { mockChallenges } from '@/data/mock/challenges';
 import { Challenge } from '@/types';
+import { findRoadmapNodeForCategory } from '@/constants/learningRoadmap';
 
 export const ChallengesPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -28,6 +29,39 @@ export const ChallengesPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<'All' | 'Solved' | 'Unsolved'>('All');
   const [sortBy, setSortBy] = useState<'points-desc' | 'points-asc' | 'solves-desc' | 'newest'>('points-desc');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Sync search & category state with URL query parameters when navigating from Topbar, Roadmap, or Learning Paths
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q !== null) {
+      setSearch(q);
+    }
+    const cat = searchParams.get('category');
+    if (cat !== null) {
+      const normalized = cat.toLowerCase().trim();
+      const matched = categories.find(
+        (c) => c.toLowerCase() === normalized
+      );
+      if (matched) {
+        setSelectedCategory(matched);
+      } else {
+        const node = findRoadmapNodeForCategory(cat);
+        if (node) {
+          const byNode = categories.find((c) => {
+            const lc = c.toLowerCase();
+            return (
+              lc === node.dbCategory.toLowerCase() ||
+              lc === node.name.toLowerCase() ||
+              node.matchTerms.some((t) => lc.includes(t))
+            );
+          });
+          setSelectedCategory(byNode || cat);
+        } else {
+          setSelectedCategory(cat);
+        }
+      }
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     // Attempt live fetch from backend API
@@ -71,6 +105,7 @@ export const ChallengesPage: React.FC = () => {
 
   const categories = [
     'All',
+    'Foundations',
     'Authentication & Access Control',
     'SQL Injection',
     'Cross-Site Scripting (XSS)',
@@ -85,17 +120,25 @@ export const ChallengesPage: React.FC = () => {
   ];
 
   // Filtering & Sorting
+  const deferredSearch = React.useDeferredValue(search);
+
   const filteredChallenges = useMemo(() => {
     return challenges
       .filter((c) => {
         // Search
-        const query = search.toLowerCase().trim();
+        const query = deferredSearch.toLowerCase().trim();
+        const categoryStr =
+          typeof c.category === 'string'
+            ? c.category
+            : (c.category as any)?.name || '';
         const matchesSearch =
           !query ||
           c.title.toLowerCase().includes(query) ||
           c.shortDescription.toLowerCase().includes(query) ||
+          (c.description && c.description.toLowerCase().includes(query)) ||
           c.owaspReference.toLowerCase().includes(query) ||
           (c.cweReference && c.cweReference.toLowerCase().includes(query)) ||
+          categoryStr.toLowerCase().includes(query) ||
           c.tags.some((t) => t.toLowerCase().includes(query));
 
         // Category
@@ -123,7 +166,7 @@ export const ChallengesPage: React.FC = () => {
         if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         return 0;
       });
-  }, [challenges, search, selectedCategory, selectedDifficulty, selectedStatus, sortBy]);
+  }, [challenges, deferredSearch, selectedCategory, selectedDifficulty, selectedStatus, sortBy]);
 
   const resetFilters = () => {
     setSearch('');
@@ -264,8 +307,8 @@ export const ChallengesPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Category Filter Matrix - Wrapped, Zero Horizontal Scrolling, Sleek Full-Width Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-0.5">
+        {/* Category Filter Matrix - Sleek single-line horizontal scroll on laptops / wrapped on ultra-wide screens */}
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 scrollbar-none 2xl:flex-wrap pt-0.5">
           {categories.map((cat) => {
             const count =
               cat === 'All'
@@ -278,7 +321,7 @@ export const ChallengesPage: React.FC = () => {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono transition-all duration-150 select-none cursor-pointer ${
+                className={`inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono transition-all duration-150 select-none cursor-pointer ${
                   isSelected
                     ? 'bg-emerald-500 text-zinc-950 font-bold shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400'
                     : 'bg-cyber-card text-cyber-muted border border-cyber-border/80 hover:border-slate-600 hover:text-cyber-text hover:bg-cyber-elevated font-medium'
@@ -303,12 +346,12 @@ export const ChallengesPage: React.FC = () => {
       {/* 3. Challenge Results */}
       {filteredChallenges.length > 0 ? (
         viewMode === 'grid' ? (
-          /* Grid View - Clean, compact spacing */
+          /* Grid View - Clean, compact spacing with rendering optimization */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3.5">
             {filteredChallenges.map((challenge) => (
               <div
                 key={challenge.id}
-                className={`rounded-xl border transition-all flex flex-col justify-between p-4 sm:p-4.5 ${
+                className={`card-render-optimized rounded-xl border transition-all flex flex-col justify-between p-4 sm:p-4.5 ${
                   challenge.solved
                     ? 'bg-cyber-card/70 border-cyber-border hover:border-emerald-800/60'
                     : 'bg-cyber-card border-cyber-border hover:border-slate-700 shadow-md'
@@ -389,7 +432,7 @@ export const ChallengesPage: React.FC = () => {
             {filteredChallenges.map((challenge) => (
               <div
                 key={challenge.id}
-                className="p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-cyber-elevated/40 transition-colors"
+                className="card-render-optimized p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-cyber-elevated/40 transition-colors"
               >
                 <div className="space-y-1 md:max-w-xl">
                   <div className="flex items-center gap-2">

@@ -10,7 +10,7 @@ export const mockLearningPaths: LearningPath[] = [
     targetCategory: 'Foundations',
     difficulty: 'Easy',
     lessonsCount: 10,
-    challengesCount: 5,
+    challengesCount: 10,
     completedLessons: 0,
     progressPercentage: 0,
     estimatedHours: 8,
