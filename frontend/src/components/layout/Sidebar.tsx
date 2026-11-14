@@ -49,6 +49,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [challengeCount, setChallengeCount] = useState<number>(63);
   const [knowledgeCount, setKnowledgeCount] = useState<number>(63);
 
+  // Floating Cyber Tooltip State for Collapsed Mode
+  const [hoveredTooltip, setHoveredTooltip] = useState<{
+    label: string;
+    section?: string;
+    badge?: string;
+    top: number;
+  } | null>(null);
+
+  const showTooltip = (
+    e: React.MouseEvent<HTMLElement>,
+    label: string,
+    section?: string,
+    badge?: string
+  ) => {
+    if (!collapsed) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHoveredTooltip({
+      label,
+      section,
+      badge,
+      top: rect.top + rect.height / 2,
+    });
+  };
+
+  const hideTooltip = () => {
+    setHoveredTooltip(null);
+  };
+
+  useEffect(() => {
+    if (!collapsed) {
+      setHoveredTooltip(null);
+    }
+  }, [collapsed]);
+
   useEffect(() => {
     apiClient
       .get('/challenges', { params: { limit: 1 } })
@@ -124,8 +158,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
+      onMouseLeave={hideTooltip}
       className={cn(
-        'h-screen flex flex-col bg-cyber-sidebar border-r border-cyber-border transition-all duration-300 select-none z-20 font-sans',
+        'h-screen flex flex-col bg-cyber-sidebar border-r border-cyber-border transition-all duration-300 select-none z-20 font-sans relative',
         collapsed ? 'w-20' : 'w-64'
       )}
     >
@@ -138,9 +173,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         {collapsed ? (
           <button
-            onClick={onToggleCollapse}
+            onClick={() => {
+              hideTooltip();
+              onToggleCollapse();
+            }}
+            onMouseEnter={(e) => showTooltip(e, 'Expand Sidebar', 'Navigation')}
+            onMouseLeave={hideTooltip}
             className="w-12 h-12 rounded-xl flex items-center justify-center hover:opacity-90 transition-all cursor-pointer group relative"
-            title="Expand Sidebar"
             aria-label="Expand Sidebar"
           >
             <img
@@ -205,7 +244,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  onClick={onNavigate}
+                  onClick={() => {
+                    hideTooltip();
+                    onNavigate?.();
+                  }}
+                  onMouseEnter={(e) => showTooltip(e, item.label, section.title, item.badge)}
+                  onMouseLeave={hideTooltip}
                   end={item.path === '/'}
                   className={({ isActive }) =>
                     cn(
@@ -216,7 +260,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       collapsed && 'justify-center px-0'
                     )
                   }
-                  title={collapsed ? item.label : undefined}
                 >
                   {({ isActive }) => (
                     <>
@@ -234,13 +277,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           {item.badge}
                         </span>
                       )}
-
-                      {/* Tooltip for collapsed mode */}
-                      {collapsed && (
-                        <div className="absolute left-full ml-2 px-2.5 py-1 bg-cyber-elevated text-cyber-text text-xs rounded-md border border-cyber-border whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-xl font-mono">
-                          {item.label}
-                        </div>
-                      )}
                     </>
                   )}
                 </NavLink>
@@ -254,7 +290,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-3 border-t border-cyber-border space-y-2 bg-cyber-sidebar">
         <NavLink
           to="/profile"
-          onClick={onNavigate}
+          onClick={() => {
+            hideTooltip();
+            onNavigate?.();
+          }}
+          onMouseEnter={(e) =>
+            showTooltip(
+              e,
+              currentUser?.username || 'Researcher Profile',
+              currentUser?.role === 'ADMIN' ? 'Security Admin' : 'Researcher Account'
+            )
+          }
+          onMouseLeave={hideTooltip}
           className={cn(
             'flex items-center space-x-3 p-2 rounded-lg hover:bg-cyber-elevated/60 transition-colors group',
             collapsed && 'justify-center px-0'
@@ -279,12 +326,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </NavLink>
 
         <button
-          onClick={handleLogout}
+          onClick={() => {
+            hideTooltip();
+            handleLogout();
+          }}
+          onMouseEnter={(e) => showTooltip(e, 'Logout Session', 'Authentication')}
+          onMouseLeave={hideTooltip}
           className={cn(
-            'w-full flex items-center space-x-3 px-3 py-1.5 rounded-lg text-xs font-medium text-cyber-muted hover:text-rose-400 hover:bg-rose-950/20 transition-colors',
+            'w-full flex items-center space-x-3 px-3 py-1.5 rounded-lg text-xs font-medium text-cyber-muted hover:text-rose-400 hover:bg-rose-950/20 transition-colors cursor-pointer',
             collapsed && 'justify-center px-0'
           )}
-          title={collapsed ? 'Logout' : undefined}
         >
           <LogOut className="w-4 h-4 flex-shrink-0" />
           {!collapsed && <span>Logout</span>}
@@ -296,6 +347,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
       </div>
+
+      {/* Floating Cyber Tooltip for Collapsed Sidebar */}
+      {collapsed && hoveredTooltip && (
+        <div
+          className="fixed z-50 pointer-events-none -translate-y-1/2 flex items-center px-3 py-1.5 rounded-lg bg-[#0e1726]/95 border border-emerald-500/40 text-cyber-text text-xs font-mono shadow-[0_4px_25px_rgba(0,0,0,0.85),0_0_15px_rgba(16,185,129,0.2)] backdrop-blur-md animate-in fade-in zoom-in-95 duration-100"
+          style={{ left: '86px', top: hoveredTooltip.top }}
+        >
+          {/* Arrow pointing back to the icon */}
+          <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rotate-45 bg-[#0e1726] border-l border-b border-emerald-500/50" />
+
+          <div className="flex flex-col min-w-0">
+            {hoveredTooltip.section && (
+              <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-400/70 leading-tight">
+                {hoveredTooltip.section}
+              </span>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-cyber-text tracking-wide whitespace-nowrap">
+                {hoveredTooltip.label}
+              </span>
+              {hoveredTooltip.badge && (
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-700/50 font-bold">
+                  {hoveredTooltip.badge}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 };
