@@ -769,10 +769,10 @@ export const RegisterPage: React.FC = () => {
           {/* Top Logo */}
           <Link to="/" className="register-brand" aria-label="websec.ctf home">
             <img
-              src="/logo-shield.svg"
+              src="/logo-icon.png"
               alt="websec.ctf"
-              className="w-7 h-8 flex-shrink-0"
-              style={{ filter: 'drop-shadow(0 0 10px rgba(45, 255, 122, 0.55))' }}
+              className="w-9 h-9 rounded-lg object-contain flex-shrink-0"
+              style={{ filter: 'drop-shadow(0 0 10px rgba(45, 255, 122, 0.45))' }}
             />
             <span className="register-brand-title">
               <span className="chromatic-title">websec</span>
@@ -910,10 +910,10 @@ export const RegisterPage: React.FC = () => {
             <div className="register-card-brand-row">
               <Link to="/" className="register-brand" aria-label="websec.ctf home">
                 <img
-                  src="/logo-shield.svg"
+                  src="/logo-icon.png"
                   alt="websec.ctf"
-                  className="w-7 h-8 flex-shrink-0"
-                  style={{ filter: 'drop-shadow(0 0 10px rgba(45, 255, 122, 0.55))' }}
+                  className="w-9 h-9 rounded-lg object-contain flex-shrink-0"
+                  style={{ filter: 'drop-shadow(0 0 10px rgba(45, 255, 122, 0.45))' }}
                 />
                 <span className="register-brand-title">
                   <span className="chromatic-title">websec</span>

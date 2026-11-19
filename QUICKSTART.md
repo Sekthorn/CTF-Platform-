@@ -73,8 +73,8 @@ docker compose up -d --build
 #### What Docker is doing automatically behind the scenes:
 1. 🗄️ Starts **MySQL 8.4** database and **Redis 7.4** cache.
 2. 📦 Applies all database migrations (`prisma migrate deploy`).
-3. 🌱 Seeds all **63 CTF Challenges** across 11 OWASP categories.
-4. 📚 Seeds all **63 Defense Guides** into the Security Knowledge Library.
+3. 🌱 Seeds all **73 CTF Challenges** across 12 OWASP & web security categories.
+4. 📚 Seeds all **73 Defense Guides** into the Security Knowledge Library.
 5. 🚀 Starts the **React Frontend** and **NestJS Backend API** behind an Nginx reverse proxy.
 
 > ⏱️ *Note: The first time you run this, Docker downloads the necessary images. It takes 2–3 minutes depending on your internet connection. Future startups take only 5 seconds!*
