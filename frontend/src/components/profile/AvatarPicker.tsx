@@ -94,8 +94,8 @@ export const AvatarPicker: React.FC<AvatarPickerProps> = ({
         </div>
 
         {/* Quick Picks Carousel */}
-        <div className="flex items-center space-x-2 overflow-x-auto pb-1 sm:pb-0 w-full sm:w-auto justify-start sm:justify-end">
-          <span className="text-[10px] font-mono text-cyber-muted uppercase mr-1 hidden lg:inline">
+        <div className="flex items-center space-x-2.5 overflow-x-auto scrollbar-none py-2 px-1.5 w-full sm:w-auto justify-start sm:justify-end">
+          <span className="text-[10px] font-mono text-cyber-muted uppercase mr-1 hidden lg:inline shrink-0">
             Quick Pick:
           </span>
           {quickPicks.map((pick) => {

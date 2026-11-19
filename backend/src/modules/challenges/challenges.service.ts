@@ -60,8 +60,8 @@ export class ChallengesService {
     const sortOrder = query.sortOrder || 'asc';
     orderBy[sortField] = sortOrder;
 
-    // Execute queries in parallel
-    const [totalCount, challenges] = await Promise.all([
+    // Execute queries in parallel (including personal solve state when authenticated)
+    const [totalCount, challenges, solvedRows] = await Promise.all([
       this.prisma.challenge.count({ where }),
       this.prisma.challenge.findMany({
         where,
@@ -105,21 +105,18 @@ export class ChallengesService {
           },
         },
       }),
+      currentUser?.id
+        ? this.prisma.userChallengeProgress.findMany({
+            where: {
+              userId: currentUser.id,
+              status: 'SOLVED',
+            },
+            select: { challengeId: true },
+          })
+        : Promise.resolve([] as { challengeId: string }[]),
     ]);
 
-    // Check personal solve status if authenticated
-    let solvedChallengeIds = new Set<string>();
-    if (currentUser?.id) {
-      const solved = await this.prisma.userChallengeProgress.findMany({
-        where: {
-          userId: currentUser.id,
-          status: 'SOLVED',
-          challengeId: { in: challenges.map((c) => c.id) },
-        },
-        select: { challengeId: true },
-      });
-      solvedChallengeIds = new Set(solved.map((s) => s.challengeId));
-    }
+    const solvedChallengeIds = new Set(solvedRows.map((s) => s.challengeId));
 
     // Transform response (Never expose flagHash!)
     const formattedChallenges = challenges.map((c) => ({

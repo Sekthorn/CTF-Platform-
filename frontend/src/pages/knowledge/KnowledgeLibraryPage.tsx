@@ -337,7 +337,7 @@ export const KnowledgeLibraryPage: React.FC = () => {
             return (
               <div
                 key={lesson.id}
-                className={`group relative rounded-xl border p-5 flex flex-col justify-between transition-all duration-200 ${
+                className={`card-render-optimized group relative rounded-xl border p-5 flex flex-col justify-between transition-all duration-200 ${
                   isUnlocked
                     ? 'bg-zinc-900/60 hover:bg-zinc-900/90 border-zinc-800 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/5'
                     : 'bg-zinc-950/60 border-zinc-800/60 opacity-80 hover:opacity-100 hover:border-amber-500/30'

@@ -56,14 +56,26 @@ export class KnowledgeService {
         : {}),
     };
 
-    const [total, lessons] = await Promise.all([
+    const [total, lessons, solvedProgress] = await Promise.all([
       this.prisma.knowledgeLesson.count({ where }),
       this.prisma.knowledgeLesson.findMany({
         where,
         skip,
         take: limit,
         orderBy: [{ difficulty: 'asc' }, { createdAt: 'asc' }],
-        include: {
+        select: {
+          id: true,
+          challengeId: true,
+          title: true,
+          slug: true,
+          description: true,
+          category: true,
+          difficulty: true,
+          owaspReference: true,
+          cweReference: true,
+          cvssScore: true,
+          status: true,
+          createdAt: true,
           challenge: {
             select: {
               id: true,
@@ -82,16 +94,14 @@ export class KnowledgeService {
           },
         },
       }),
+      this.prisma.userChallengeProgress.findMany({
+        where: {
+          userId,
+          status: ProgressStatus.SOLVED,
+        },
+        select: { challengeId: true },
+      }),
     ]);
-
-    // Check user solved challenges to determine unlock status
-    const solvedProgress = await this.prisma.userChallengeProgress.findMany({
-      where: {
-        userId,
-        status: ProgressStatus.SOLVED,
-      },
-      select: { challengeId: true },
-    });
     const solvedChallengeIds = new Set(
       solvedProgress.map((p) => p.challengeId),
     );
@@ -304,6 +314,7 @@ export class KnowledgeService {
         }),
         this.prisma.userLessonProgress.findMany({
           where: { userId },
+          select: { lessonId: true, status: true },
         }),
         this.prisma.userChallengeProgress.findMany({
           where: { userId, status: ProgressStatus.SOLVED },

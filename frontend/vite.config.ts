@@ -29,9 +29,24 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:3000',
         changeOrigin: true,
         secure: false,
+        configure: (proxy) => {
+          proxy.on('error', (_err, _req, res) => {
+            if ('headersSent' in res && !res.headersSent && 'writeHead' in res) {
+              res.writeHead(503, { 'Content-Type': 'application/json' });
+              res.end(
+                JSON.stringify({
+                  success: false,
+                  statusCode: 503,
+                  message:
+                    'Backend API is starting or unavailable on http://127.0.0.1:3000. Please retry in a few seconds.',
+                }),
+              );
+            }
+          });
+        },
       },
     },
   },

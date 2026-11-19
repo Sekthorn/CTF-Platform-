@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   BookOpen,
   Shield,
@@ -13,452 +14,598 @@ import {
   Flag,
   X,
   ChevronRight,
+  ChevronDown,
   CheckCircle2,
   Info,
   Terminal,
+  Copy,
+  Check,
+  Compass,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import {
+  SECURITY_FRAMEWORKS,
+  FOUNDATIONS_CHEAT_SHEET,
+  SecurityFramework,
+} from '@/data/docsData';
 
-interface SecurityFramework {
-  code: string;
-  title: string;
-  category: 'owasp' | 'methodology' | 'taxonomy';
-  version: string;
-  summary: string;
-  description: string;
-  officialUrl: string;
-  specUrl: string;
-  repoUrl?: string;
-  tags: string[];
-  keyCategories: { id: string; name: string; focus: string }[];
-  ctfRelevance: string;
-}
+type DocsTab = 'all' | 'owasp' | 'methodology' | 'roe' | 'platform';
+
+const CATEGORY_THEME: Record<
+  SecurityFramework['category'],
+  {
+    label: string;
+    badge: string;
+    accentLine: string;
+    hoverBorder: string;
+    pillText: string;
+  }
+> = {
+  owasp: {
+    label: 'OWASP Standard',
+    badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
+    accentLine: 'from-emerald-500/60 via-emerald-400/20 to-transparent',
+    hoverBorder: 'hover:border-emerald-500/45',
+    pillText: 'text-emerald-400',
+  },
+  taxonomy: {
+    label: 'Taxonomy & Scoring',
+    badge: 'bg-sky-500/10 text-sky-400 border-sky-500/25',
+    accentLine: 'from-sky-500/60 via-cyan-400/20 to-transparent',
+    hoverBorder: 'hover:border-sky-500/45',
+    pillText: 'text-sky-400',
+  },
+  methodology: {
+    label: 'Testing Methodology',
+    badge: 'bg-amber-500/10 text-amber-400 border-amber-500/25',
+    accentLine: 'from-amber-500/60 via-orange-400/20 to-transparent',
+    hoverBorder: 'hover:border-amber-500/45',
+    pillText: 'text-amber-400',
+  },
+};
 
 export const DocsPage: React.FC = () => {
+  const { isAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'owasp' | 'methodology' | 'roe' | 'platform'>('all');
-  const [selectedFramework, setSelectedFramework] = useState<SecurityFramework | null>(null);
+  const [activeTab, setActiveTab] = useState<DocsTab>('all');
+  const [selectedFramework, setSelectedFramework] =
+    useState<SecurityFramework | null>(null);
+  const [showCheatSheet, setShowCheatSheet] = useState(false);
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
 
-  // Authoritative Security Frameworks and Vulnerability Taxonomies
-  const frameworks: SecurityFramework[] = [
-    {
-      code: 'OWASP-TOP10',
-      title: 'OWASP Top 10:2021 (with 2025 Roadmap)',
-      category: 'owasp',
-      version: 'v2021 / 2025 Draft',
-      summary: 'The foundational globally recognized awareness standard for critical web application security risks.',
-      description:
-        'The OWASP Top 10 is the premier consensus-based document detailing the most critical security risks facing modern web applications. Adopted by PCI-DSS, NIST, FTC, and international cybersecurity bodies, it provides developers and penetration testers with essential guidance on application vulnerabilities and mitigation techniques.',
-      officialUrl: 'https://owasp.org/www-project-top-ten/',
-      specUrl: 'https://owasp.org/Top10/',
-      repoUrl: 'https://github.com/OWASP/Top10',
-      tags: ['Broken Access Control', 'Cryptographic Failures', 'Injection', 'Insecure Design', 'SSRF'],
-      ctfRelevance:
-        'WebSec CTF structures its primary challenge matrix around OWASP Top 10 categories, ranging from basic SQL injection to advanced multi-step SSRF attacks.',
-      keyCategories: [
-        { id: 'A01:2021', name: 'Broken Access Control', focus: 'Enforcement failures, IDOR, path traversal, bypassing authorization checks.' },
-        { id: 'A02:2021', name: 'Cryptographic Failures', focus: 'Sensitive data exposure in transit/at rest, weak ciphers, missing TLS.' },
-        { id: 'A03:2021', name: 'Injection', focus: 'SQL, NoSQL, OS command, ORM, and LDAP injection from untrusted input.' },
-        { id: 'A04:2021', name: 'Insecure Design', focus: 'Missing threat modeling, insecure architectural patterns, flawed business logic.' },
-        { id: 'A05:2021', name: 'Security Misconfiguration', focus: 'Default credentials, verbose error stack traces, unhardened HTTP headers.' },
-        { id: 'A06:2021', name: 'Vulnerable & Outdated Components', focus: 'Dependencies with known CVEs, unpatched frameworks, supply chain risks.' },
-        { id: 'A07:2021', name: 'Identification & Auth Failures', focus: 'Credential stuffing, brute force, weak session management, missing MFA.' },
-        { id: 'A08:2021', name: 'Software & Data Integrity Failures', focus: 'Insecure CI/CD pipelines, untrusted deserialization, integrity bypasses.' },
-        { id: 'A09:2021', name: 'Security Logging & Monitoring', focus: 'Failure to log authentication failures, missing alerts for suspicious activity.' },
-        { id: 'A10:2021', name: 'Server-Side Request Forgery (SSRF)', focus: 'Fetching remote resources without validating user-supplied destination URLs.' },
-      ],
-    },
-    {
-      code: 'OWASP-WSTG',
-      title: 'OWASP Web Security Testing Guide (WSTG)',
-      category: 'owasp',
-      version: 'v4.2 / v5.0 Master',
-      summary: 'The premier cybersecurity testing playbook for penetration testers and application security auditors.',
-      description:
-        'The OWASP Web Security Testing Guide (WSTG) is a comprehensive framework for testing the security of web applications and web services. Created by security professionals and penetration testing experts, it details over 90 specialized test cases spanning information gathering, identity management, authentication, and client-side security.',
-      officialUrl: 'https://owasp.org/www-project-web-security-testing-guide/',
-      specUrl: 'https://owasp.org/www-project-web-security-testing-guide/stable/',
-      repoUrl: 'https://github.com/OWASP/wstg',
-      tags: ['Black-box Testing', 'Grey-box Testing', 'Methodology', 'Burp Suite', 'Vulnerability Assessment'],
-      ctfRelevance:
-        'Every challenge solution walkthrough in WebSec CTF is mapped directly to standard WSTG test identifiers (e.g. WSTG-INPV-05 for SQL Injection).',
-      keyCategories: [
-        { id: 'WSTG-INFO', name: 'Information Gathering', focus: 'OSINT, banner grabbing, directory enumeration, web server fingerprinting.' },
-        { id: 'WSTG-CONF', name: 'Configuration Management', focus: 'Infrastructure review, HTTP methods, HSTS, CORS configuration.' },
-        { id: 'WSTG-IDNT', name: 'Identity Management', focus: 'Role definition, user registration, account enumeration, username harvesting.' },
-        { id: 'WSTG-ATHN', name: 'Authentication Testing', focus: 'Password reset flaws, brute force resistance, remember-me token security.' },
-        { id: 'WSTG-ATHZ', name: 'Authorization Testing', focus: 'Horizontal/vertical privilege escalation, BOLA/IDOR, directory traversal.' },
-        { id: 'WSTG-SESS', name: 'Session Management', focus: 'Session fixation, cookie attributes (HttpOnly, Secure, SameSite), CSRF.' },
-        { id: 'WSTG-INPV', name: 'Input Validation', focus: 'XSS, SQLi, command injection, path traversal, XML external entities (XXE).' },
-        { id: 'WSTG-CRYP', name: 'Cryptography Testing', focus: 'Weak SSL/TLS ciphers, padding oracles, predictable random number generators.' },
-        { id: 'WSTG-BIZ', name: 'Business Logic Testing', focus: 'Price tampering, race conditions, skipping transactional workflow steps.' },
-        { id: 'WSTG-CLNT', name: 'Client-Side Testing', focus: 'DOM-based XSS, WebSocket vulnerabilities, postMessage security, clickjacking.' },
-      ],
-    },
-    {
-      code: 'OWASP-ASVS',
-      title: 'OWASP Application Security Verification Standard (ASVS)',
-      category: 'owasp',
-      version: 'v4.0.3 / v5.0',
-      summary: 'Rigorous technical requirements and controls for designing, developing, and auditing secure applications.',
-      description:
-        'The OWASP Application Security Verification Standard (ASVS) provides developers and architects with a basis for designing and building secure web applications. It defines three progressive verification levels (L1 Automated, L2 Standard Applications, L3 Critical Infrastructure), serving as a benchmark for technical security verification.',
-      officialUrl: 'https://owasp.org/www-project-application-security-verification-standard/',
-      specUrl: 'https://github.com/OWASP/ASVS/releases',
-      repoUrl: 'https://github.com/OWASP/ASVS',
-      tags: ['Verification Levels', 'Security Architecture', 'Compliance', 'Defensive Controls'],
-      ctfRelevance:
-        'Used in our defense and remediation challenges, teaching players how to verify and implement secure controls that meet ASVS standards.',
-      keyCategories: [
-        { id: 'Level 1', name: 'Opportunistic Baseline', focus: 'Verification that can be performed using automated penetration testing tools.' },
-        { id: 'Level 2', name: 'Standard Commercial Apps', focus: 'Required for applications handling sensitive B2B data, PII, and financial transactions.' },
-        { id: 'Level 3', name: 'High Assurance & Critical', focus: 'Required for defense, healthcare, and critical national infrastructure systems.' },
-        { id: 'Chapter V2', name: 'Authentication Verification', focus: 'NIST 800-63b alignment, credential hygiene, password managers compatibility.' },
-        { id: 'Chapter V3', name: 'Session Management', focus: 'Secure cookie attributes, token revocation, anti-session hijacking controls.' },
-        { id: 'Chapter V5', name: 'Validation & Encoding', focus: 'Context-aware output encoding, strict parameter allowlisting, safe parsers.' },
-      ],
-    },
-    {
-      code: 'OWASP-API',
-      title: 'OWASP API Security Top 10',
-      category: 'owasp',
-      version: '2023 Edition',
-      summary: 'Top 10 vulnerability classifications targeting modern REST, GraphQL, and microservice APIs.',
-      description:
-        'APIs power modern web and mobile applications, but often introduce unique attack surfaces that traditional web security models miss. The OWASP API Security Top 10 focuses on API-specific vulnerabilities such as Broken Object Level Authorization (BOLA), mass assignment, and lack of resource consumption rate limits.',
-      officialUrl: 'https://owasp.org/www-project-api-security/',
-      specUrl: 'https://owasp.org/API-Security/editions/2023/en/0x00-header/',
-      repoUrl: 'https://github.com/OWASP/API-Security',
-      tags: ['BOLA', 'IDOR', 'JWT Exploitation', 'GraphQL', 'REST API Security', 'Mass Assignment'],
-      ctfRelevance:
-        'WebSec CTF includes dedicated API training labs featuring vulnerable JWT validation, GraphQL introspection, and microservice token forgery.',
-      keyCategories: [
-        { id: 'API1:2023', name: 'Broken Object Level Authorization (BOLA)', focus: 'IDOR where users manipulate object IDs in API endpoints to access other tenants.' },
-        { id: 'API2:2023', name: 'Broken Authentication', focus: 'JWT signature bypass (alg:none), predictable tokens, lack of rate limiting on login.' },
-        { id: 'API3:2023', name: 'Broken Object Property Level Authorization', focus: 'Mass assignment leading to privilege escalation; excessive data exposure in JSON responses.' },
-        { id: 'API4:2023', name: 'Unrestricted Resource Consumption', focus: 'Lack of pagination limits, regex DoS (ReDoS), memory exhaustion via large payloads.' },
-        { id: 'API5:2023', name: 'Broken Function Level Authorization (BFLA)', focus: 'Non-admin users accessing /api/v1/admin/users endpoints due to missing RBAC.' },
-        { id: 'API6:2023', name: 'Unrestricted Access to Business Flows', focus: 'Botting, automated coupon brute-forcing, inventory hoarding without CAPTCHA.' },
-        { id: 'API7:2023', name: 'Server-Side Request Forgery (SSRF)', focus: 'Exploiting webhook registration or URL validation to pivot into internal cloud APIs.' },
-        { id: 'API8:2023', name: 'Security Misconfiguration', focus: 'Unprotected Swagger/OpenAPI docs, unhandled exceptions returning stack traces.' },
-        { id: 'API9:2023', name: 'Improper Inventory Management', focus: 'Deprecated /v1 endpoints left running with unpatched security flaws (Shadow APIs).' },
-        { id: 'API10:2023', name: 'Unsafe Consumption of APIs', focus: 'Blindly trusting third-party API responses without input sanitization.' },
-      ],
-    },
-    {
-      code: 'MITRE-CWE',
-      title: 'CWE — Common Weakness Enumeration',
-      category: 'taxonomy',
-      version: 'v4.14 / Top 25',
-      summary: 'Community-developed formal dictionary of software security weaknesses, flaws, and vulnerabilities.',
-      description:
-        'Maintained by the MITRE Corporation, Common Weakness Enumeration (CWE) provides a unified, measurable taxonomy of software flaws. It connects real-world CVE vulnerability advisories to underlying code defects, providing developers with clear mitigation advice.',
-      officialUrl: 'https://cwe.mitre.org/',
-      specUrl: 'https://cwe.mitre.org/top25/archive/2023/2023_cwe_top25.html',
-      repoUrl: 'https://github.com/CWE-CAPEC/cwe-schema',
-      tags: ['CWE Top 25', 'Code Flaws', 'Vulnerability Taxonomy', 'Static Analysis'],
-      ctfRelevance:
-        'Every single challenge in WebSec CTF is tagged with its formal CWE identifier so players learn to correlate vulnerabilities with real CVE alerts.',
-      keyCategories: [
-        { id: 'CWE-79', name: 'Improper Neutralization of Input (XSS)', focus: 'Cross-site Scripting via reflected, stored, or DOM-based vectors.' },
-        { id: 'CWE-89', name: 'SQL Injection', focus: 'Improper neutralization of special elements used in an SQL Command.' },
-        { id: 'CWE-20', name: 'Improper Input Validation', focus: 'Failure to validate that incoming input conforms to expected specifications.' },
-        { id: 'CWE-22', name: 'Path Traversal', focus: 'Using ../ sequences to access restricted files outside the intended root directory.' },
-        { id: 'CWE-352', name: 'Cross-Site Request Forgery (CSRF)', focus: 'Forcing an authenticated victim browser to execute unwanted actions.' },
-        { id: 'CWE-434', name: 'Unrestricted Upload of File with Dangerous Type', focus: 'Uploading executable PHP/JSP scripts via file upload functionality.' },
-        { id: 'CWE-862', name: 'Missing Authorization', focus: 'Executing privileged code without verifying that the requester has permissions.' },
-        { id: 'CWE-918', name: 'Server-Side Request Forgery (SSRF)', focus: 'Server making unexpected network connections on behalf of an attacker.' },
-      ],
-    },
-    {
-      code: 'FIRST-CVSS',
-      title: 'CVSS — Common Vulnerability Scoring System',
-      category: 'taxonomy',
-      version: 'v3.1 & v4.0 Specification',
-      summary: 'Open industry standard for assessing the severity and exploitability metrics of software vulnerabilities.',
-      description:
-        'Managed by FIRST (Forum of Incident Response and Security Teams), the Common Vulnerability Scoring System (CVSS) provides a standard numerical rating (0.0 to 10.0) reflecting vulnerability severity. It combines Base (intrinsic qualities), Temporal (exploit maturity), and Environmental metrics.',
-      officialUrl: 'https://www.first.org/cvss/',
-      specUrl: 'https://www.first.org/cvss/v3.1/specification-document',
-      repoUrl: 'https://www.first.org/cvss/calculator/3.1',
-      tags: ['CVSS 3.1', 'CVSS 4.0', 'Severity Scoring', 'Exploitability Metrics', 'FIRST'],
-      ctfRelevance:
-        'Challenges show CVSS v3.1 vector strings (e.g. CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H) to help operators understand real-world risk calculation.',
-      keyCategories: [
-        { id: 'Base Metrics', name: 'Exploitability Metrics', focus: 'Attack Vector (AV), Attack Complexity (AC), Privileges Required (PR), User Interaction (UI).' },
-        { id: 'Impact Metrics', name: 'Technical Impact', focus: 'Confidentiality (C), Integrity (I), Availability (A), Scope (S).' },
-        { id: 'Severity Ratings', name: 'Qualitative Scale', focus: 'None (0.0), Low (0.1 - 3.9), Medium (4.0 - 6.9), High (7.0 - 8.9), Critical (9.0 - 10.0).' },
-        { id: 'CVSS v4.0', name: 'Macro-vectors', focus: 'Introduces CVSS-B (Base), CVSS-BT (Threat), CVSS-BE (Environmental), and CVSS-BTE.' },
-      ],
-    },
-    {
-      code: 'MITRE-ATT&CK',
-      title: 'MITRE ATT&CK Framework',
-      category: 'methodology',
-      version: 'Enterprise Matrix v14',
-      summary: 'Globally accessible knowledge base of adversary tactics and techniques based on real-world observations.',
-      description:
-        'MITRE ATT&CK is a curated knowledge base detailing adversary behavior across the entire cyber attack lifecycle. For web penetration testing, it describes how initial access via public-facing applications (T1190) transitions to credential harvesting, lateral movement, and command execution.',
-      officialUrl: 'https://attack.mitre.org/',
-      specUrl: 'https://attack.mitre.org/matrices/enterprise/',
-      repoUrl: 'https://attack.mitre.org/techniques/T1190/',
-      tags: ['Adversary Simulation', 'Threat Modeling', 'TTPs', 'Initial Access', 'Web Shells'],
-      ctfRelevance:
-        'Simulates real adversarial attack chains: chaining web vulnerabilities into reverse shells and privilege escalation.',
-      keyCategories: [
-        { id: 'TA0001', name: 'Initial Access (T1190)', focus: 'Exploiting public-facing applications via unpatched zero-days or web vulnerabilities.' },
-        { id: 'TA0002', name: 'Execution (T1059)', focus: 'Command and scripting interpreter execution (sh, bash, Python, PowerShell).' },
-        { id: 'TA0003', name: 'Persistence (T1505)', focus: 'Placing server web shells in public web directories to maintain persistent access.' },
-        { id: 'TA0004', name: 'Privilege Escalation (T1068)', focus: 'Exploiting local sudo privileges, SUID binaries, or vulnerable kernel modules.' },
-        { id: 'TA0006', name: 'Credential Access (T1552)', focus: 'Harvesting environment variables, .env files, database credentials, and cloud metadata.' },
-      ],
-    },
-    {
-      code: 'PTES-STANDARD',
-      title: 'PTES — Penetration Testing Execution Standard',
-      category: 'methodology',
-      version: 'Release 1.0',
-      summary: 'Standardized operational lifecycle guiding professional penetration testing engagements from scoping to reporting.',
-      description:
-        'The Penetration Testing Execution Standard (PTES) defines a baseline methodology for technical security testing engagements. Developed by industry leaders, it establishes the 7 distinct phases required to conduct thorough, repeatable, and ethical penetration tests.',
-      officialUrl: 'http://www.pentest-standard.org/',
-      specUrl: 'http://www.pentest-standard.org/index.php/PTES_Technical_Guidelines',
-      tags: ['Methodology', 'Engagement Lifecycle', 'Scoping', 'Rules of Engagement', 'Reporting'],
-      ctfRelevance:
-        'Teaches players to approach CTF challenges systematically using professional reconnaissance, threat modeling, and documented proof-of-concept steps.',
-      keyCategories: [
-        { id: 'Phase 1', name: 'Pre-engagement Interactions', focus: 'Scoping, rules of engagement, legal authority, emergency escalation procedures.' },
-        { id: 'Phase 2', name: 'Intelligence Gathering', focus: 'OSINT, domain reconnaissance, banner grabbing, technology stack detection.' },
-        { id: 'Phase 3', name: 'Threat Modeling', focus: 'Identifying crown-jewel assets, threat actor motivation, attack surface mapping.' },
-        { id: 'Phase 4', name: 'Vulnerability Analysis', focus: 'Verifying automated scanner output, manual exploit payload development.' },
-        { id: 'Phase 5', name: 'Exploitation', focus: 'Executing controlled attacks without disrupting client availability or data integrity.' },
-        { id: 'Phase 6', name: 'Post Exploitation', focus: 'Determining the value and impact of compromised machines, identifying sensitive data.' },
-        { id: 'Phase 7', name: 'Reporting', focus: 'Documenting findings with executive summaries, CVSS scores, and reproducible remediation steps.' },
-      ],
-    },
-    {
-      code: 'PORTSWIGGER',
-      title: 'PortSwigger Web Security Academy & Research',
-      category: 'methodology',
-      version: 'Active 2026 Curriculum',
-      summary: 'Cutting-edge web security research, practical exploit walkthroughs, and modern vulnerability advisories.',
-      description:
-        'Created by PortSwigger (the developers of Burp Suite), the Web Security Academy provides premier hands-on web penetration testing training. It documents cutting-edge attack techniques such as HTTP Request Smuggling, WebSockets vulnerabilities, Prototype Pollution, and OAuth 2.0 implementation flaws.',
-      officialUrl: 'https://portswigger.net/web-security',
-      specUrl: 'https://portswigger.net/research',
-      tags: ['Burp Suite', 'HTTP Request Smuggling', 'Prototype Pollution', 'OAuth 2.0', 'Advanced Web Exploitation'],
-      ctfRelevance:
-        'Our Medium and Hard challenges draw directly from advanced PortSwigger research papers, including HTTP header manipulation and prototype pollution.',
-      keyCategories: [
-        { id: 'Advanced Web', name: 'HTTP Request Smuggling', focus: 'Exploiting discrepant parsing between reverse proxies and backends (CL.TE, TE.CL).' },
-        { id: 'Client/Server', name: 'Server-Side Template Injection', focus: 'Gaining remote code execution via Jinja2, FreeMarker, and Twig template engines.' },
-        { id: 'Authentication', name: 'OAuth 2.0 & OpenID Connect', focus: 'Flawed token exchange, redirect_uri hijacking, CSRF in state parameter.' },
-        { id: 'JavaScript Flaws', name: 'Prototype Pollution', focus: 'Modifying Object.prototype in Node.js backends and client-side applications.' },
-      ],
-    },
-    {
-      code: 'NIST-SP800-115',
-      title: 'NIST SP 800-115 — InfoSec Testing & Assessment Guide',
-      category: 'methodology',
-      version: 'Final Publication',
-      summary: 'Federal technical guide for conducting information security testing, vulnerability scanning, and pen-testing.',
-      description:
-        'NIST Special Publication 800-115 provides recommendations for improving an organization’s security posture through technical testing and examination. It covers target identification, port and vulnerability scanning, wireless security, password cracking, and structured penetration testing.',
-      officialUrl: 'https://csrc.nist.gov/publications/detail/sp/800-115/final',
-      specUrl: 'https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-115.pdf',
-      tags: ['NIST', 'Compliance', 'Security Assessment', 'Vulnerability Scanning', 'Federal Standards'],
-      ctfRelevance:
-        'Provides the methodological rigor behind WebSec CTF reporting standards and objective technical evidence collection.',
-      keyCategories: [
-        { id: 'Section 4', name: 'Target Identification', focus: 'Network port scanning, service identification, network device enumeration.' },
-        { id: 'Section 5', name: 'Vulnerability Analysis', focus: 'Automated vulnerability scanning, application security testing, configuration audit.' },
-        { id: 'Section 6', name: 'Penetration Testing', focus: 'Phase-based testing (Planning, Discovery, Attack, Reporting), risk mitigation.' },
-        { id: 'Section 7', name: 'Post-Testing Activities', focus: 'Removing backdoors/testing artifacts, restoring original configuration states.' },
-      ],
-    },
-  ];
+  const owaspCount = useMemo(
+    () => SECURITY_FRAMEWORKS.filter((fw) => fw.category === 'owasp').length,
+    [],
+  );
+  const methodologyCount = useMemo(
+    () =>
+      SECURITY_FRAMEWORKS.filter(
+        (fw) => fw.category === 'methodology' || fw.category === 'taxonomy',
+      ).length,
+    [],
+  );
 
-  // Filter frameworks based on search and active tab
+  // Allow Escape key to close the framework breakdown modal
+  useEffect(() => {
+    if (!selectedFramework) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedFramework(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedFramework]);
+
   const filteredFrameworks = useMemo(() => {
-    return frameworks.filter((fw) => {
+    const q = searchQuery.trim().toLowerCase();
+    return SECURITY_FRAMEWORKS.filter((fw) => {
       const matchesSearch =
-        fw.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        fw.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        fw.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        fw.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+        !q ||
+        fw.title.toLowerCase().includes(q) ||
+        fw.code.toLowerCase().includes(q) ||
+        fw.summary.toLowerCase().includes(q) ||
+        fw.tags.some((tag) => tag.toLowerCase().includes(q)) ||
+        fw.keyCategories.some(
+          (cat) =>
+            cat.id.toLowerCase().includes(q) ||
+            cat.name.toLowerCase().includes(q),
+        );
 
       if (!matchesSearch) return false;
-
-      if (activeTab === 'all') return true;
       if (activeTab === 'owasp') return fw.category === 'owasp';
-      if (activeTab === 'methodology') return fw.category === 'methodology' || fw.category === 'taxonomy';
+      if (activeTab === 'methodology') {
+        return fw.category === 'methodology' || fw.category === 'taxonomy';
+      }
       return true;
     });
   }, [searchQuery, activeTab]);
 
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (value.trim() && (activeTab === 'roe' || activeTab === 'platform')) {
+      setActiveTab('all');
+    }
+  };
+
+  const handleTagClick = (tag: string) => {
+    setSearchQuery((prev) =>
+      prev.toLowerCase() === tag.toLowerCase() ? '' : tag,
+    );
+    if (activeTab === 'roe' || activeTab === 'platform') {
+      setActiveTab('all');
+    }
+  };
+
+  const handleCopyCommand = async (slug: string, command: string) => {
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopiedSlug(slug);
+      setTimeout(() => {
+        setCopiedSlug((prev) => (prev === slug ? null : prev));
+      }, 1800);
+    } catch {
+      // Clipboard API may be unavailable in restricted contexts
+    }
+  };
+
+  const showFrameworksSection =
+    activeTab === 'all' || activeTab === 'owasp' || activeTab === 'methodology';
+
   return (
-    <div className="space-y-8 max-w-6xl font-sans pb-16">
-      {/* Page Header */}
-      <div className="border-b border-cyber-border/70 pb-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[11px] font-mono uppercase tracking-widest text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                // PLATFORM KNOWLEDGE BASE
+    <div className="w-full max-w-[1720px] mx-auto space-y-6 pb-16 font-sans animate-fade-in">
+      {/* ==================================================================== */}
+      {/* HERO HEADER BANNER                                                   */}
+      {/* ==================================================================== */}
+      <div className="relative rounded-2xl bg-gradient-to-r from-emerald-950/45 via-zinc-900/75 to-cyan-950/40 border border-emerald-500/20 p-6 md:p-7 overflow-hidden backdrop-blur-sm">
+        <div
+          className="absolute -right-8 -bottom-10 opacity-[0.07] pointer-events-none select-none"
+          aria-hidden="true"
+        >
+          <BookOpen className="w-64 h-64 text-emerald-400" />
+        </div>
+
+        <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+          <div className="space-y-3 max-w-3xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/25">
+                <Sparkles className="w-3 h-3" />
+                // Platform Knowledge Base
               </span>
-              <span className="text-xs font-mono text-cyber-muted">STANDARDS & OPERATIONAL MANUAL</span>
+              <span className="text-[11px] font-mono text-cyber-muted uppercase tracking-wider px-2.5 py-1 rounded-full bg-cyber-elevated/70 border border-cyber-border">
+                Standards &amp; Operational Manual
+              </span>
+              {isAdmin && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-purple-300 bg-purple-500/10 px-2.5 py-1 rounded-full border border-purple-500/30">
+                  <Shield className="w-3 h-3" />
+                  Admin Operator Reference
+                </span>
+              )}
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-cyber-text tracking-tight flex items-center gap-2.5">
-              <BookOpen className="w-6 h-6 text-emerald-400" />
-              Documentation & Security Frameworks
+
+            <h1 className="text-2xl sm:text-3xl xl:text-4xl font-extrabold text-cyber-text tracking-tight flex items-center gap-3">
+              <BookOpen className="w-7 h-7 text-emerald-400 shrink-0 hidden sm:block" />
+              <span>Documentation &amp; Security Frameworks</span>
             </h1>
-            <p className="text-sm text-cyber-muted mt-1 max-w-2xl leading-relaxed">
-              Official industry standards, vulnerability taxonomies, testing methodologies, and operational rules of engagement for WebSec CTF.
+
+            <p className="text-sm text-cyber-muted leading-relaxed max-w-2xl">
+              Authoritative industry standards, vulnerability taxonomies,
+              testing methodologies, flag capture mechanics, and operational rules
+              of engagement for WebSec CTF.
             </p>
           </div>
 
-          {/* Quick Stats Banner */}
-          <div className="flex items-center gap-3 bg-cyber-card border border-cyber-border rounded-xl px-4 py-2.5 shadow-sm">
-            <div className="text-center pr-3 border-r border-cyber-border">
-              <div className="text-lg font-bold font-mono text-emerald-400">10</div>
-              <div className="text-[10px] font-mono text-cyber-muted uppercase">Frameworks</div>
+          {/* Right Telemetry & Quick Navigation Card */}
+          <div className="flex flex-col sm:flex-row xl:flex-col items-stretch sm:items-center xl:items-end gap-3 shrink-0">
+            <div className="grid grid-cols-3 bg-zinc-950/75 border border-zinc-800/90 rounded-xl px-4 py-3 shadow-sm">
+              <div className="text-center pr-4 border-r border-zinc-800">
+                <div className="text-xl font-bold font-mono text-emerald-400">
+                  {SECURITY_FRAMEWORKS.length}
+                </div>
+                <div className="text-[10px] font-mono text-cyber-muted uppercase tracking-wider">
+                  Frameworks
+                </div>
+              </div>
+              <div className="text-center px-4 border-r border-zinc-800">
+                <div className="text-xl font-bold font-mono text-sky-400">
+                  100%
+                </div>
+                <div className="text-[10px] font-mono text-cyber-muted uppercase tracking-wider">
+                  Official Specs
+                </div>
+              </div>
+              <div className="text-center pl-4">
+                <div className="text-xl font-bold font-mono text-amber-400">
+                  v2.4
+                </div>
+                <div className="text-[10px] font-mono text-cyber-muted uppercase tracking-wider">
+                  CTF Standard
+                </div>
+              </div>
             </div>
-            <div className="text-center pr-3 border-r border-cyber-border">
-              <div className="text-lg font-bold font-mono text-sky-400">100%</div>
-              <div className="text-[10px] font-mono text-cyber-muted uppercase">Official Links</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold font-mono text-amber-400">v2.4</div>
-              <div className="text-[10px] font-mono text-cyber-muted uppercase">CTF Standard</div>
+
+            <div className="flex items-center gap-2">
+              <Link
+                to="/learning-paths"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-mono text-cyber-text bg-cyber-card hover:bg-cyber-elevated border border-cyber-border transition-colors"
+              >
+                <Compass className="w-3.5 h-3.5 text-sky-400" />
+                <span>Learning Paths</span>
+              </Link>
+              <Link
+                to="/challenges"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-mono font-bold bg-emerald-500 text-emerald-950 hover:bg-emerald-400 transition-colors"
+              >
+                <Flag className="w-3.5 h-3.5" />
+                <span>Practice Labs</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-2 overflow-x-auto mt-6 pt-2 border-t border-cyber-border/50 text-xs font-mono">
+      {/* ==================================================================== */}
+      {/* UNIFIED NAVIGATION TABS & LIVE SEARCH BAR                            */}
+      {/* ==================================================================== */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-cyber-card/70 border border-cyber-border rounded-xl p-2.5">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none text-xs font-mono">
           <button
             type="button"
             onClick={() => setActiveTab('all')}
-            className={`px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'all'
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold'
-                : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-elevated'
+                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 font-bold shadow-sm'
+                : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-elevated border border-transparent'
             }`}
           >
             <span>All References</span>
-            <span className="text-[10px] opacity-75">({frameworks.length})</span>
+            <span className="text-[10px] opacity-75">
+              ({SECURITY_FRAMEWORKS.length})
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('owasp')}
-            className={`px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'owasp'
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold'
-                : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-elevated'
+                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 font-bold shadow-sm'
+                : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-elevated border border-transparent'
             }`}
           >
             <span>OWASP Standards</span>
-            <span className="text-[10px] opacity-75">(4)</span>
+            <span className="text-[10px] opacity-75">({owaspCount})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('methodology')}
-            className={`px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'methodology'
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold'
-                : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-elevated'
+                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 font-bold shadow-sm'
+                : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-elevated border border-transparent'
             }`}
           >
-            <span>Methodologies & Taxonomies</span>
-            <span className="text-[10px] opacity-75">(6)</span>
+            <span>Methodologies &amp; Taxonomies</span>
+            <span className="text-[10px] opacity-75">({methodologyCount})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('roe')}
-            className={`px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'roe'
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold'
-                : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-elevated'
+                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 font-bold shadow-sm'
+                : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-elevated border border-transparent'
             }`}
           >
             <Shield className="w-3.5 h-3.5" />
-            <span>Rules of Engagement (ROE)</span>
+            <span>Rules of Engagement</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('platform')}
-            className={`px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'platform'
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold'
-                : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-elevated'
+                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/35 font-bold shadow-sm'
+                : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-elevated border border-transparent'
             }`}
           >
             <Server className="w-3.5 h-3.5" />
-            <span>Platform Architecture & Mechanics</span>
+            <span>Architecture &amp; Flag Guide</span>
           </button>
+        </div>
+
+        <div className="relative w-full lg:w-80 shrink-0">
+          <Search className="w-4 h-4 text-cyber-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Search framework, CWE, OWASP, CVSS..."
+            className="w-full h-9 pl-9 pr-8 text-xs bg-zinc-950/70 border border-cyber-border rounded-lg text-cyber-text placeholder:text-cyber-muted/60 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-cyber-muted hover:text-cyber-text"
+              aria-label="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* ==================================================================== */}
-      {/* SECTION: RULES OF ENGAGEMENT (Visible when 'all' or 'roe' active)    */}
+      {/* SECTION: SECURITY FRAMEWORKS & OFFICIAL REFERENCES                   */}
+      {/* ==================================================================== */}
+      {showFrameworksSection && (
+        <section aria-labelledby="frameworks-heading" className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2
+              id="frameworks-heading"
+              className="text-base font-bold text-cyber-text flex items-center gap-2 font-mono uppercase tracking-wider"
+            >
+              <BookOpen className="w-4 h-4 text-emerald-400" />
+              <span>Security Framework References &amp; Taxonomies</span>
+              <span className="text-xs font-normal text-cyber-muted lowercase">
+                ({filteredFrameworks.length} of {SECURITY_FRAMEWORKS.length}{' '}
+                specifications)
+              </span>
+            </h2>
+
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="text-xs font-mono text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Clear filter &quot;{searchQuery}&quot;</span>
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {filteredFrameworks.map((fw) => {
+              const theme = CATEGORY_THEME[fw.category];
+              return (
+                <article
+                  key={fw.code}
+                  className={`relative overflow-hidden rounded-xl border border-cyber-border bg-cyber-card p-5 flex flex-col justify-between space-y-4 ${theme.hoverBorder} transition-all shadow-md group`}
+                >
+                  {/* Subtle top category hairline accent */}
+                  <div
+                    className={`absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r ${theme.accentLine}`}
+                    aria-hidden="true"
+                  />
+
+                  <div className="space-y-3">
+                    {/* Top Metadata Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-[11px] font-mono px-2.5 py-0.5 rounded border font-bold ${theme.badge}`}
+                        >
+                          {fw.code}
+                        </span>
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-cyber-muted">
+                          {theme.label}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[11px] font-mono text-cyber-muted">
+                        <span className="px-2 py-0.5 rounded bg-cyber-elevated/80 border border-cyber-border/70">
+                          {fw.keyCategories.length} domains
+                        </span>
+                        <span>{fw.version}</span>
+                      </div>
+                    </div>
+
+                    {/* Title & Summary */}
+                    <div>
+                      <h3 className="text-base font-bold text-cyber-text group-hover:text-emerald-300 transition-colors">
+                        {fw.title}
+                      </h3>
+                      <p className="text-xs text-cyber-muted leading-relaxed mt-1.5">
+                        {fw.summary}
+                      </p>
+                    </div>
+
+                    {/* Clickable Filter Tags */}
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {fw.tags.map((tag) => {
+                        const isActiveTag =
+                          searchQuery.toLowerCase() === tag.toLowerCase();
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => handleTagClick(tag)}
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-colors ${
+                              isActiveTag
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                : 'bg-cyber-elevated/80 text-slate-300 border-cyber-border/80 hover:border-emerald-500/35 hover:text-emerald-300'
+                            }`}
+                            title={`Filter by ${tag}`}
+                          >
+                            {tag}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* CTF Alignment Callout */}
+                    <div className="text-[11.5px] text-cyber-muted bg-cyber-elevated/50 p-3 rounded-lg border border-cyber-border/60 flex items-start gap-2.5">
+                      <Terminal
+                        className={`w-3.5 h-3.5 ${theme.pillText} mt-0.5 shrink-0`}
+                      />
+                      <span className="leading-relaxed">{fw.ctfRelevance}</span>
+                    </div>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="pt-3 border-t border-cyber-border/80 flex flex-wrap items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFramework(fw)}
+                      className="text-xs font-mono font-semibold text-cyber-text hover:text-emerald-400 transition-colors inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-cyber-elevated/60 hover:bg-cyber-elevated border border-cyber-border/70"
+                    >
+                      <span>Inspect Domains</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+
+                    <div className="flex items-center gap-3">
+                      {fw.repoUrl && (
+                        <a
+                          href={fw.repoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-mono text-slate-400 hover:text-white transition-colors inline-flex items-center gap-1"
+                          title="GitHub / Project Source"
+                        >
+                          <span>Source</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      <a
+                        href={fw.specUrl || fw.officialUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-mono font-bold text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 bg-emerald-500/10 hover:bg-emerald-500/15 px-2.5 py-1.5 rounded-lg border border-emerald-500/25 transition-colors"
+                      >
+                        <span>Official Spec</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          {filteredFrameworks.length === 0 && (
+            <div className="rounded-xl border border-dashed border-cyber-border bg-cyber-card/40 p-10 text-center space-y-2">
+              <p className="text-cyber-text text-sm font-mono font-semibold">
+                No security framework matches &quot;{searchQuery}&quot;
+              </p>
+              <p className="text-cyber-muted text-xs font-mono">
+                Try searching for &quot;OWASP&quot;, &quot;SQL&quot;,
+                &quot;API&quot;, &quot;CWE&quot;, or &quot;SSRF&quot;.
+              </p>
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors"
+              >
+                Reset Search
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ==================================================================== */}
+      {/* SECTION: RULES OF ENGAGEMENT (ROE)                                   */}
       {/* ==================================================================== */}
       {(activeTab === 'all' || activeTab === 'roe') && (
         <section aria-labelledby="roe-heading" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 id="roe-heading" className="text-base font-bold text-cyber-text flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2
+              id="roe-heading"
+              className="text-base font-bold text-cyber-text flex items-center gap-2 font-mono uppercase tracking-wider"
+            >
               <Shield className="w-4 h-4 text-emerald-400" />
               <span>Platform Rules of Engagement (ROE)</span>
-              <span className="text-[11px] font-mono text-emerald-400/80 font-normal px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
-                MANDATORY PROTOCOL
-              </span>
             </h2>
+            <span className="text-[11px] font-mono text-emerald-400 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25">
+              MANDATORY PROTOCOL
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Rule 1: Scoped Targets */}
-            <div className="rounded-xl border border-cyber-border bg-cyber-card p-5 space-y-2.5">
-              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs font-mono">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <span>1. AUTHORIZED TARGETS & ISOLATED CONTAINERS</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {/* Rule 1 */}
+            <div className="relative overflow-hidden rounded-xl border border-cyber-border bg-cyber-card p-5 space-y-3 hover:border-emerald-500/35 transition-colors">
+              <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-emerald-500/70 to-transparent" />
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 shrink-0">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <span className="text-emerald-400 font-bold text-xs font-mono leading-snug">
+                  1. AUTHORIZED TARGETS &amp; ISOLATION
+                </span>
               </div>
               <p className="text-xs text-cyber-muted leading-relaxed">
-                Security testing and exploit activities are strictly authorized <strong className="text-cyber-text">only against your designated challenge container instances</strong>. Each challenge runs in a private Docker bridge sandbox. Under no circumstances should you target other players&apos; instances.
+                Testing is strictly authorized{' '}
+                <strong className="text-cyber-text">
+                  only against your designated challenge targets
+                </strong>
+                . Each environment runs in an isolated sandbox—never target
+                other players&apos; sessions or containers.
               </p>
             </div>
 
-            {/* Rule 2: Out of Bounds */}
-            <div className="rounded-xl border border-red-500/20 bg-red-950/10 p-5 space-y-2.5">
-              <div className="flex items-center gap-2 text-red-400 font-bold text-xs font-mono">
-                <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                <span>2. OUT-OF-BOUNDS PLATFORM INFRASTRUCTURE</span>
+            {/* Rule 2 */}
+            <div className="relative overflow-hidden rounded-xl border border-red-500/25 bg-red-950/10 p-5 space-y-3 hover:border-red-500/45 transition-colors">
+              <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-red-500/80 to-transparent" />
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 shrink-0">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <span className="text-red-400 font-bold text-xs font-mono leading-snug">
+                  2. OUT-OF-BOUNDS INFRASTRUCTURE
+                </span>
               </div>
               <p className="text-xs text-cyber-muted leading-relaxed">
-                Attacking the main platform infrastructure (<code className="text-red-300 font-mono">CTF Backend :3000</code>, <code className="text-red-300 font-mono">MySQL Database :3306</code>, <code className="text-red-300 font-mono">Redis :6379</code>, or Docker Host daemon) is strictly forbidden and triggers automated IP disqualification.
+                Attacking core platform services (
+                <code className="text-red-300 font-mono">Backend :3000</code>,{' '}
+                <code className="text-red-300 font-mono">MySQL</code>,{' '}
+                <code className="text-red-300 font-mono">Redis</code>, or
+                Docker daemon) is strictly prohibited and triggers automated
+                disqualification.
               </p>
             </div>
 
-            {/* Rule 3: Flag Integrity */}
-            <div className="rounded-xl border border-cyber-border bg-cyber-card p-5 space-y-2.5">
-              <div className="flex items-center gap-2 text-sky-400 font-bold text-xs font-mono">
-                <Key className="w-4 h-4 text-sky-400 flex-shrink-0" />
-                <span>3. PER-PLAYER DYNAMIC FLAGS & INTEGRITY</span>
+            {/* Rule 3 */}
+            <div className="relative overflow-hidden rounded-xl border border-cyber-border bg-cyber-card p-5 space-y-3 hover:border-sky-500/35 transition-colors">
+              <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-sky-500/70 to-transparent" />
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/25 text-sky-400 shrink-0">
+                  <Key className="w-4 h-4" />
+                </div>
+                <span className="text-sky-400 font-bold text-xs font-mono leading-snug">
+                  3. DYNAMIC FLAG INTEGRITY
+                </span>
               </div>
               <p className="text-xs text-cyber-muted leading-relaxed">
-                Flags in WebSec CTF use per-player cryptographic HMAC generation (<code className="text-sky-300 font-mono">websec&#123;...&#125;</code>). Sharing plaintext flags with other participants bypasses learning and will fail server-side validation. Methodological discussions are welcomed; flag trading is prohibited.
+                Flags use per-player cryptographic binding (
+                <code className="text-sky-300 font-mono">websec&#123;...&#125;</code>
+                ). Sharing plaintext flags bypasses learning and fails
+                validation; discuss techniques, never trade flags.
               </p>
             </div>
 
-            {/* Rule 4: DoS Limits */}
-            <div className="rounded-xl border border-cyber-border bg-cyber-card p-5 space-y-2.5">
-              <div className="flex items-center gap-2 text-amber-400 font-bold text-xs font-mono">
-                <Cpu className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                <span>4. VOLUMETRIC DOS & AGGRESSIVE FUZZING LIMITS</span>
+            {/* Rule 4 */}
+            <div className="relative overflow-hidden rounded-xl border border-cyber-border bg-cyber-card p-5 space-y-3 hover:border-amber-500/35 transition-colors">
+              <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-amber-500/70 to-transparent" />
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-400 shrink-0">
+                  <Cpu className="w-4 h-4" />
+                </div>
+                <span className="text-amber-400 font-bold text-xs font-mono leading-snug">
+                  4. RATE &amp; FUZZING LIMITS
+                </span>
               </div>
               <p className="text-xs text-cyber-muted leading-relaxed">
-                Automated volumetric denial-of-service (DoS), flood attacks, and high-frequency scanners (&gt; 50 req/sec) are strictly blocked. Solutions do not require brute forcing network bandwidth; all challenges are solvable through targeted vulnerability exploitation.
+                Volumetric DoS floods and aggressive scanners (&gt; 50 req/sec)
+                are blocked. Every lab is designed for targeted manual or
+                precision scripted exploitation—never bandwidth brute force.
               </p>
             </div>
           </div>
@@ -466,288 +613,300 @@ export const DocsPage: React.FC = () => {
       )}
 
       {/* ==================================================================== */}
-      {/* SECTION: PLATFORM MECHANICS (Visible when 'all' or 'platform' active) */}
+      {/* SECTION: PLATFORM ARCHITECTURE & PRACTICAL FLAG FIELD GUIDE          */}
       {/* ==================================================================== */}
       {(activeTab === 'all' || activeTab === 'platform') && (
         <section aria-labelledby="platform-heading" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 id="platform-heading" className="text-base font-bold text-cyber-text flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2
+              id="platform-heading"
+              className="text-base font-bold text-cyber-text flex items-center gap-2 font-mono uppercase tracking-wider"
+            >
               <Server className="w-4 h-4 text-emerald-400" />
-              <span>CTF Platform Architecture & Game Mechanics</span>
+              <span>CTF Platform Architecture &amp; Game Mechanics</span>
             </h2>
+            <span className="text-[11px] font-mono text-cyber-muted">
+              12 Categories • 73 Live Challenges
+            </span>
           </div>
 
+          {/* 3 Architecture Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Dynamic Flag Format */}
-            <div className="rounded-xl border border-cyber-border bg-cyber-card p-5 space-y-3">
-              <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs font-bold">
-                <Flag className="w-4 h-4" />
-                <span>Flag Standard</span>
+            <div className="rounded-xl border border-cyber-border bg-cyber-card p-5 flex flex-col justify-between space-y-3">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2.5 text-emerald-400 font-mono text-xs font-bold">
+                  <div className="p-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/25">
+                    <Flag className="w-4 h-4" />
+                  </div>
+                  <span>Flag Standard</span>
+                </div>
+                <p className="text-xs text-cyber-muted leading-relaxed">
+                  Flags follow{' '}
+                  <code className="text-emerald-400 font-mono font-bold bg-cyber-elevated px-1.5 py-0.5 rounded">
+                    websec&#123;...&#125;
+                  </code>{' '}
+                  (or{' '}
+                  <code className="text-emerald-300 font-mono">
+                    WEBSEC&#123;...&#125;
+                  </code>
+                  ). Dynamic labs bind each capture to the operator&apos;s
+                  active session token.
+                </p>
               </div>
-              <p className="text-xs text-cyber-muted leading-relaxed">
-                Standard format is <code className="text-emerald-400 font-mono font-bold bg-cyber-elevated px-1.5 py-0.5 rounded">websec&#123;...&#125;</code>.
-                Dynamic flags are seeded using the player&apos;s cryptographic token, ensuring that each operator must exploit the target application themselves to obtain their unique flag.
-              </p>
-              <div className="text-[11px] font-mono text-cyber-muted bg-cyber-elevated/60 p-2.5 rounded border border-cyber-border/40">
-                Format: <span className="text-emerald-300">websec&#123;[a-z0-9_]+&#125;</span>
+              <div className="text-[11px] font-mono text-cyber-muted bg-cyber-elevated/60 px-3 py-2 rounded-lg border border-cyber-border/50">
+                Pattern:{' '}
+                <span className="text-emerald-300">
+                  websec&#123;[a-z0-9_]+&#125;
+                </span>
               </div>
             </div>
 
-            {/* Docker Isolation */}
-            <div className="rounded-xl border border-cyber-border bg-cyber-card p-5 space-y-3">
-              <div className="flex items-center gap-2 text-sky-400 font-mono text-xs font-bold">
-                <Layers className="w-4 h-4" />
-                <span>Container Isolation</span>
+            <div className="rounded-xl border border-cyber-border bg-cyber-card p-5 flex flex-col justify-between space-y-3">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2.5 text-sky-400 font-mono text-xs font-bold">
+                  <div className="p-1.5 rounded-md bg-sky-500/10 border border-sky-500/25">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <span>Container Isolation</span>
+                </div>
+                <p className="text-xs text-cyber-muted leading-relaxed">
+                  Isolated lab environments enforce non-root privileges,
+                  read-only root filesystems, CPU quotas (0.5 vCPU), and memory
+                  caps (256MB).
+                </p>
               </div>
-              <p className="text-xs text-cyber-muted leading-relaxed">
-                Challenge environments are deployed on-demand in isolated Docker containers with non-root privileges, read-only root filesystems, CPU quotas (0.5 vCPU), and memory limits (256MB).
-              </p>
-              <div className="text-[11px] font-mono text-cyber-muted bg-cyber-elevated/60 p-2.5 rounded border border-cyber-border/40">
-                Instance TTL: <span className="text-sky-300">60-minute auto-expiry</span>
+              <div className="text-[11px] font-mono text-cyber-muted bg-cyber-elevated/60 px-3 py-2 rounded-lg border border-cyber-border/50">
+                Instance TTL:{' '}
+                <span className="text-sky-300">60-minute auto-expiry</span>
               </div>
             </div>
 
-            {/* Hint System & Penalties */}
-            <div className="rounded-xl border border-cyber-border bg-cyber-card p-5 space-y-3">
-              <div className="flex items-center gap-2 text-amber-400 font-mono text-xs font-bold">
-                <Code2 className="w-4 h-4" />
-                <span>Scoring & Hint Penalties</span>
+            <div className="rounded-xl border border-cyber-border bg-cyber-card p-5 flex flex-col justify-between space-y-3">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2.5 text-amber-400 font-mono text-xs font-bold">
+                  <div className="p-1.5 rounded-md bg-amber-500/10 border border-amber-500/25">
+                    <Code2 className="w-4 h-4" />
+                  </div>
+                  <span>Scoring &amp; Hint Penalties</span>
+                </div>
+                <p className="text-xs text-cyber-muted leading-relaxed">
+                  Challenges award dynamic points based on difficulty and solve
+                  decay. Three progressive hint tiers unlock guidance cleanly.
+                </p>
               </div>
-              <p className="text-xs text-cyber-muted leading-relaxed">
-                Challenges award dynamic points that decay slightly as more operators solve them. Hints are structured in 3 progressive tiers with transparent point deductions.
-              </p>
-              <div className="text-[11px] font-mono text-cyber-muted bg-cyber-elevated/60 p-2.5 rounded border border-cyber-border/40">
+              <div className="text-[11px] font-mono text-amber-300/90 bg-cyber-elevated/60 px-3 py-2 rounded-lg border border-cyber-border/50">
                 Tier 1 (Free) • Tier 2 (-15%) • Tier 3 (-40%)
               </div>
             </div>
           </div>
 
-          {/* Step-by-Step Guide: How to Find Flags & Web Security Fundamentals Targets */}
-          <div className="rounded-xl border border-emerald-500/25 bg-cyber-card p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs font-bold uppercase tracking-wider">
-                <Terminal className="w-4 h-4" />
-                <span>How to Find Flags — Practical Field Guide (Including Web Security Fundamentals)</span>
+          {/* Practical Flag Field Guide */}
+          <div className="rounded-xl border border-emerald-500/25 bg-cyber-card p-5 md:p-6 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs font-bold uppercase tracking-wider">
+                  <Terminal className="w-4 h-4" />
+                  <span>
+                    How to Find Flags — 4-Step Penetration Testing Workflow
+                  </span>
+                </div>
+                <p className="text-xs text-cyber-muted leading-relaxed">
+                  Target endpoints live under{' '}
+                  <code className="text-emerald-300 font-mono bg-cyber-elevated px-1.5 py-0.5 rounded">
+                    /api/v1/targets/:username/:slug/...
+                  </code>{' '}
+                  or shorthand{' '}
+                  <code className="text-emerald-300 font-mono bg-cyber-elevated px-1.5 py-0.5 rounded">
+                    /api/v1/targets/:slug/...
+                  </code>
+                  . Flags are returned inside HTTP response headers, JSON
+                  payloads, DOM responses, or query results.
+                </p>
               </div>
-              <span className="text-[11px] font-mono text-emerald-300/80 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 w-fit">
-                12 Categories • 73 Live Challenges
-              </span>
+
+              <Link
+                to="/challenges?category=Foundations"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-mono font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-colors shrink-0 w-fit"
+              >
+                <span>Open Fundamentals Labs</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
 
-            <p className="text-xs text-cyber-muted leading-relaxed">
-              Every challenge exposes an HTTP microservice target under{' '}
-              <code className="text-emerald-300 font-mono bg-cyber-elevated px-1.5 py-0.5 rounded">
-                /api/v1/targets/:username/:slug/...
-              </code>{' '}
-              (or the shorthand{' '}
-              <code className="text-emerald-300 font-mono bg-cyber-elevated px-1.5 py-0.5 rounded">
-                /api/v1/targets/:slug/...
-              </code>
-              ). Flags follow the format <code className="text-emerald-400 font-mono">WEBSEC&#123;...&#125;</code> and are returned inside HTTP response headers, JSON API responses, DOM/console leaks, or database query output once you trigger or verify the target condition.
-            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 text-xs">
+              <div className="rounded-lg border border-cyber-border bg-cyber-elevated/45 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-bold text-cyan-400 text-[11px]">
+                    01. INSPECT HEADERS &amp; COOKIES
+                  </span>
+                  <span className="text-[10px] font-mono text-cyan-400/70 bg-cyan-500/10 px-1.5 py-0.5 rounded">
+                    Recon
+                  </span>
+                </div>
+                <p className="text-[11.5px] text-cyber-muted leading-relaxed">
+                  Use DevTools (
+                  <kbd className="px-1 py-0.5 bg-cyber-card border border-cyber-border rounded text-[10px]">
+                    F12
+                  </kbd>{' '}
+                  → Network) or <code className="text-cyan-300 font-mono">curl -i</code>. Body-only output misses flags in{' '}
+                  <code className="text-cyan-300 font-mono">
+                    X-Foundations-Trace
+                  </code>{' '}
+                  or <code className="text-cyan-300 font-mono">Set-Cookie</code>.
+                </p>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-              <div className="rounded-lg border border-cyber-border bg-cyber-elevated/50 p-3 space-y-1.5">
-                <div className="font-mono font-bold text-cyan-400 text-[11px]">1. Inspect Headers &amp; Cookies</div>
-                <p className="text-[11px] text-cyber-muted leading-relaxed">
-                  Open DevTools (<kbd className="px-1 py-0.5 bg-cyber-card border border-cyber-border rounded">F12</kbd> → Network) or run <code className="text-cyan-300 font-mono">curl -i</code>. Body-only output hides tokens inside <code className="text-cyan-300 font-mono">X-Foundations-Trace</code>, <code className="text-cyan-300 font-mono">Strict-Transport-Security</code>, or <code className="text-cyan-300 font-mono">Set-Cookie</code>.
+              <div className="rounded-lg border border-cyber-border bg-cyber-elevated/45 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-bold text-amber-400 text-[11px]">
+                    02. PROBE VERBS &amp; PREFLIGHT
+                  </span>
+                  <span className="text-[10px] font-mono text-amber-400/70 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                    Enum
+                  </span>
+                </div>
+                <p className="text-[11.5px] text-cyber-muted leading-relaxed">
+                  Send <code className="text-amber-300 font-mono">OPTIONS</code>{' '}
+                  to reveal <code className="text-amber-300 font-mono">Allow</code>{' '}
+                  methods, then test state-changing verbs (
+                  <code className="text-amber-300 font-mono">PUT</code> /{' '}
+                  <code className="text-amber-300 font-mono">POST</code>) or
+                  cross-origin <code className="text-amber-300 font-mono">Origin</code>{' '}
+                  headers.
                 </p>
               </div>
-              <div className="rounded-lg border border-cyber-border bg-cyber-elevated/50 p-3 space-y-1.5">
-                <div className="font-mono font-bold text-amber-400 text-[11px]">2. Probe Verbs &amp; Preflight</div>
-                <p className="text-[11px] text-cyber-muted leading-relaxed">
-                  Send <code className="text-amber-300 font-mono">OPTIONS</code> to enumerate <code className="text-amber-300 font-mono">Allow</code> methods, then replay state-changing verbs (<code className="text-amber-300 font-mono">PUT</code> / <code className="text-amber-300 font-mono">POST</code>) or spoofed <code className="text-amber-300 font-mono">Origin</code> headers.
+
+              <div className="rounded-lg border border-cyber-border bg-cyber-elevated/45 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-bold text-violet-400 text-[11px]">
+                    03. INTERCEPT &amp; TAMPER
+                  </span>
+                  <span className="text-[10px] font-mono text-violet-400/70 bg-violet-500/10 px-1.5 py-0.5 rounded">
+                    Exploit
+                  </span>
+                </div>
+                <p className="text-[11.5px] text-cyber-muted leading-relaxed">
+                  Client UI controls never enforce trust. Replay requests in Burp
+                  Repeater or <code className="text-violet-300 font-mono">curl -X POST</code>{' '}
+                  modifying prices, roles, JWT claims, or object IDs.
                 </p>
               </div>
-              <div className="rounded-lg border border-cyber-border bg-cyber-elevated/50 p-3 space-y-1.5">
-                <div className="font-mono font-bold text-violet-400 text-[11px]">3. Intercept &amp; Tamper Payloads</div>
-                <p className="text-[11px] text-cyber-muted leading-relaxed">
-                  Browser forms and disabled fields only constrain UI. Replay <code className="text-violet-300 font-mono">POST</code> requests with Burp Repeater or <code className="text-violet-300 font-mono">curl -X POST</code> modifying prices, roles, cookies, or JWT claims.
-                </p>
-              </div>
-              <div className="rounded-lg border border-cyber-border bg-cyber-elevated/50 p-3 space-y-1.5">
-                <div className="font-mono font-bold text-emerald-400 text-[11px]">4. Verify &amp; Capture</div>
-                <p className="text-[11px] text-cyber-muted leading-relaxed">
-                  Once your probe triggers the vulnerable response or validates the security control (SOP tuple, STRIDE trust boundary, ASVS V3), copy the <code className="text-emerald-300 font-mono">WEBSEC&#123;...&#125;</code> token and submit it in the Challenge Workspace.
+
+              <div className="rounded-lg border border-cyber-border bg-cyber-elevated/45 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-bold text-emerald-400 text-[11px]">
+                    04. VERIFY &amp; SUBMIT FLAG
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-400/70 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                    Capture
+                  </span>
+                </div>
+                <p className="text-[11.5px] text-cyber-muted leading-relaxed">
+                  Once your probe triggers the vulnerable path or validates a
+                  hardened control (SOP, STRIDE, ASVS), copy the{' '}
+                  <code className="text-emerald-300 font-mono">
+                    WEBSEC&#123;...&#125;
+                  </code>{' '}
+                  token into Challenge Workspace.
                 </p>
               </div>
             </div>
 
-            <div className="rounded-lg border border-cyber-border bg-cyber-elevated/30 p-3.5 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
-                  Web Security Fundamentals (Foundations) — Target Endpoints Cheat Sheet
+            {/* Collapsible Web Security Fundamentals Target Cheat Sheet */}
+            <div className="rounded-lg border border-cyber-border bg-zinc-950/55 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowCheatSheet((prev) => !prev)}
+                className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-cyber-elevated/40 transition-colors"
+                aria-expanded={showCheatSheet}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                    Web Security Fundamentals — 10 Target Probe Commands
+                  </span>
+                  <span className="text-[10px] font-mono text-cyber-muted px-2 py-0.5 rounded bg-cyber-elevated border border-cyber-border">
+                    Copy-ready curl snippets
+                  </span>
+                </div>
+
+                <span className="inline-flex items-center gap-1 text-xs font-mono text-cyber-muted">
+                  <span>{showCheatSheet ? 'Hide' : 'Expand'}</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      showCheatSheet ? 'rotate-180' : ''
+                    }`}
+                  />
                 </span>
-                <span className="text-[10px] font-mono text-cyber-muted">
-                  Full solutions: docs/CHALLENGE_SOLUTIONS_WALKTHROUGH.md
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-mono">
-                <div className="text-cyber-muted">
-                  <span className="text-cyan-300">http2-header-semantics-lab</span> → <span className="text-cyber-text">curl -i .../api/v1/health</span> (check <code className="text-emerald-400">X-Foundations-Trace</code> header)
-                </div>
-                <div className="text-cyber-muted">
-                  <span className="text-cyan-300">http-method-verb-safety-lab</span> → <span className="text-cyber-text">OPTIONS / PUT .../status</span>
-                </div>
-                <div className="text-cyber-muted">
-                  <span className="text-cyan-300">owasp-top10-taxonomy-lab</span> → <span className="text-cyber-text">GET .../api/triage?owasp=A01&amp;attackVector=AV:N</span>
-                </div>
-                <div className="text-cyber-muted">
-                  <span className="text-cyan-300">tls-https-transport-basics-lab</span> → <span className="text-cyber-text">GET .../tls-check?enforce=hsts</span>
-                </div>
-                <div className="text-cyber-muted">
-                  <span className="text-cyan-300">same-origin-policy-boundaries-lab</span> → <span className="text-cyber-text">GET .../api/origin-check?url=https://portal.websec.local/admin</span>
-                </div>
-                <div className="text-cyber-muted">
-                  <span className="text-cyan-300">cors-preflight-trust-flaws-lab</span> → <span className="text-cyber-text">curl -i -H &quot;Origin: https://attacker.example&quot; .../api/account</span>
-                </div>
-                <div className="text-cyber-muted">
-                  <span className="text-cyan-300">rfc6265-cookie-flags-lab</span> → <span className="text-cyber-text">curl -i .../login?mode=secure</span>
-                </div>
-                <div className="text-cyber-muted">
-                  <span className="text-cyan-300">browser-storage-session-basics-lab</span> → <span className="text-cyber-text">GET .../api/storage-audit?recommended=httponly_cookie</span>
-                </div>
-                <div className="text-cyber-muted">
-                  <span className="text-cyan-300">web-proxy-interception-lab</span> → <span className="text-cyber-text">POST .../api/checkout</span> with tampered <code className="text-emerald-400">&#123;&quot;price&quot;:1,&quot;role&quot;:&quot;admin&quot;&#125;</code>
-                </div>
-                <div className="text-cyber-muted">
-                  <span className="text-cyan-300">owasp-threat-modeling-a00-lab</span> → <span className="text-cyber-text">GET .../api/threat-model?stride=spoofing,tampering&amp;trustBoundary=browser-to-api</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+              </button>
 
-      {/* ==================================================================== */}
-      {/* SECTION: SECURITY FRAMEWORKS & OFFICIAL REFERENCES                   */}
-      {/* ==================================================================== */}
-      {(activeTab === 'all' || activeTab === 'owasp' || activeTab === 'methodology') && (
-        <section aria-labelledby="frameworks-heading" className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 id="frameworks-heading" className="text-base font-bold text-cyber-text flex items-center gap-2 font-mono uppercase tracking-wider">
-                <span>Security Framework References & Taxonomies</span>
-                <span className="text-xs font-normal text-cyber-muted lowercase">
-                  ({filteredFrameworks.length} specifications available)
-                </span>
-              </h2>
-            </div>
+              {showCheatSheet && (
+                <div className="border-t border-cyber-border/80 p-4 space-y-3">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+                    {FOUNDATIONS_CHEAT_SHEET.map((item) => {
+                      const isCopied = copiedSlug === item.slug;
+                      return (
+                        <div
+                          key={item.slug}
+                          className="rounded-lg border border-cyber-border/80 bg-cyber-card/70 p-3 flex items-start justify-between gap-3"
+                        >
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+                              <span className="px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-bold">
+                                {item.method}
+                              </span>
+                              <span className="text-cyber-text font-semibold truncate">
+                                {item.slug}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-cyber-muted">
+                              {item.hint}
+                            </div>
+                            <code className="block text-[10.5px] font-mono text-emerald-300/90 bg-zinc-950/80 px-2 py-1 rounded border border-cyber-border/50 truncate">
+                              {item.command}
+                            </code>
+                          </div>
 
-            {/* Search Input */}
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-cyber-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search framework or CWE..."
-                className="w-full h-9 pl-9 pr-8 text-xs bg-cyber-card border border-cyber-border rounded-lg text-cyber-text placeholder:text-cyber-muted/60 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-cyber-muted hover:text-cyber-text"
-                  aria-label="Clear search"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopyCommand(item.slug, item.command)
+                            }
+                            className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono bg-cyber-elevated hover:bg-emerald-500/15 text-cyber-text hover:text-emerald-300 border border-cyber-border transition-colors"
+                            title="Copy curl command"
+                          >
+                            {isCopied ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                <span className="text-emerald-400">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {isAdmin && (
+                    <div className="text-[11px] font-mono text-purple-300/90 bg-purple-500/10 border border-purple-500/25 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+                      <span>
+                        Admin Walkthrough Reference: full lab verification
+                        notes are stored locally in{' '}
+                        <code className="text-purple-200">
+                          docs/CHALLENGE_SOLUTIONS_WALKTHROUGH.md
+                        </code>{' '}
+                        (excluded from public git).
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
-
-          {/* Framework Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredFrameworks.map((fw) => (
-              <div
-                key={fw.code}
-                className="rounded-xl border border-cyber-border bg-cyber-card p-5 flex flex-col justify-between space-y-4 hover:border-emerald-500/40 transition-all shadow-md group"
-              >
-                <div className="space-y-3">
-                  {/* Top Bar with Badge & Version */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 font-bold">
-                      {fw.code}
-                    </span>
-                    <span className="text-[11px] font-mono text-cyber-muted">
-                      {fw.version}
-                    </span>
-                  </div>
-
-                  {/* Title & Summary */}
-                  <div>
-                    <h3 className="text-base font-bold text-cyber-text group-hover:text-emerald-300 transition-colors">
-                      {fw.title}
-                    </h3>
-                    <p className="text-xs text-cyber-muted leading-relaxed mt-1.5">
-                      {fw.summary}
-                    </p>
-                  </div>
-
-                  {/* Key Tags */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {fw.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyber-elevated text-slate-300 border border-cyber-border/80"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* CTF Relevance Callout */}
-                  <div className="text-[11.5px] text-cyber-muted bg-cyber-elevated/50 p-2.5 rounded-lg border border-cyber-border/60 flex items-start gap-2">
-                    <Terminal className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                    <span className="leading-snug">{fw.ctfRelevance}</span>
-                  </div>
-                </div>
-
-                {/* Footer Action Links with Verified Official URLs */}
-                <div className="pt-3 border-t border-cyber-border flex flex-wrap items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedFramework(fw)}
-                    className="text-xs font-mono text-cyber-muted hover:text-emerald-400 transition-colors inline-flex items-center gap-1"
-                  >
-                    <span>View Breakdown</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-
-                  <div className="flex items-center gap-3">
-                    {fw.repoUrl && (
-                      <a
-                        href={fw.repoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-mono text-slate-400 hover:text-white transition-colors inline-flex items-center gap-1"
-                        title="GitHub / Project Source"
-                      >
-                        <span>Source / Docs</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                    <a
-                      href={fw.specUrl || fw.officialUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-mono font-bold text-emerald-400 hover:underline inline-flex items-center gap-1 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20"
-                    >
-                      <span>Official Specification</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {filteredFrameworks.length === 0 && (
-            <div className="rounded-xl border border-dashed border-cyber-border p-8 text-center text-cyber-muted text-xs font-mono">
-              No security framework or taxonomy matches &quot;{searchQuery}&quot;. Try searching for &quot;OWASP&quot;, &quot;SQL&quot;, &quot;API&quot;, or &quot;CWE&quot;.
-            </div>
-          )}
         </section>
       )}
 
@@ -760,25 +919,38 @@ export const DocsPage: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
+          onClick={() => setSelectedFramework(null)}
         >
-          <div className="bg-cyber-card border border-cyber-border rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div
+            className="bg-cyber-card border border-cyber-border rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
             <div className="p-5 border-b border-cyber-border flex items-start justify-between gap-3 bg-cyber-elevated/40">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                  <span
+                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                      CATEGORY_THEME[selectedFramework.category].badge
+                    }`}
+                  >
                     {selectedFramework.code}
                   </span>
-                  <span className="text-xs font-mono text-cyber-muted">{selectedFramework.version}</span>
+                  <span className="text-xs font-mono text-cyber-muted">
+                    {selectedFramework.version}
+                  </span>
                 </div>
-                <h3 id="modal-title" className="text-lg font-bold text-cyber-text">
+                <h3
+                  id="modal-title"
+                  className="text-lg font-bold text-cyber-text"
+                >
                   {selectedFramework.title}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedFramework(null)}
-                className="text-cyber-muted hover:text-white p-1 rounded-lg hover:bg-cyber-elevated transition-colors"
+                className="text-cyber-muted hover:text-white p-1.5 rounded-lg hover:bg-cyber-elevated transition-colors"
                 aria-label="Close dialog"
               >
                 <X className="w-5 h-5" />
@@ -788,8 +960,8 @@ export const DocsPage: React.FC = () => {
             {/* Modal Scrollable Body */}
             <div className="p-5 overflow-y-auto space-y-4 text-xs font-sans">
               <div>
-                <h4 className="text-xs font-bold text-cyber-text font-mono uppercase tracking-wider mb-1">
-                  Overview & Scope
+                <h4 className="text-xs font-bold text-cyber-text font-mono uppercase tracking-wider mb-1.5">
+                  Overview &amp; Scope
                 </h4>
                 <p className="text-cyber-muted leading-relaxed">
                   {selectedFramework.description}
@@ -798,19 +970,21 @@ export const DocsPage: React.FC = () => {
 
               <div>
                 <h4 className="text-xs font-bold text-cyber-text font-mono uppercase tracking-wider mb-2">
-                  Key Categories & Vulnerability Focus
+                  Key Categories &amp; Vulnerability Focus
                 </h4>
                 <div className="space-y-2">
                   {selectedFramework.keyCategories.map((item) => (
                     <div
                       key={item.id}
-                      className="p-2.5 rounded-lg bg-cyber-elevated/70 border border-cyber-border/70 flex flex-col sm:flex-row sm:items-baseline gap-1.5 sm:gap-3"
+                      className="p-3 rounded-lg bg-cyber-elevated/70 border border-cyber-border/70 flex flex-col sm:flex-row sm:items-baseline gap-1.5 sm:gap-3"
                     >
-                      <span className="font-mono text-emerald-400 font-bold whitespace-nowrap text-[11px]">
+                      <span className="font-mono text-emerald-400 font-bold whitespace-nowrap text-[11px] min-w-[92px]">
                         {item.id}
                       </span>
                       <div className="flex-1">
-                        <span className="font-bold text-cyber-text">{item.name}: </span>
+                        <span className="font-bold text-cyber-text">
+                          {item.name}:{' '}
+                        </span>
                         <span className="text-cyber-muted">{item.focus}</span>
                       </div>
                     </div>
@@ -818,23 +992,25 @@ export const DocsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/20 text-emerald-300 text-xs flex items-start gap-2">
-                <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="p-3.5 rounded-lg bg-emerald-950/25 border border-emerald-500/25 text-emerald-300 text-xs flex items-start gap-2.5">
+                <Info className="w-4 h-4 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="font-semibold">WebSec CTF Alignment: </strong>
+                  <strong className="font-semibold">
+                    WebSec CTF Alignment:{' '}
+                  </strong>
                   {selectedFramework.ctfRelevance}
                 </div>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-cyber-border bg-cyber-elevated/30 flex items-center justify-between">
+            <div className="p-4 border-t border-cyber-border bg-cyber-elevated/30 flex flex-wrap items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedFramework(null)}
                 className="px-4 py-2 rounded-lg text-xs font-mono text-cyber-muted hover:text-cyber-text hover:bg-cyber-elevated transition-colors"
               >
-                Close
+                Close (Esc)
               </button>
 
               <div className="flex items-center gap-2">
@@ -863,13 +1039,17 @@ export const DocsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Author & Attribution Footer */}
+      {/* ==================================================================== */}
+      {/* ATTRIBUTION FOOTER                                                   */}
+      {/* ==================================================================== */}
       <div className="pt-6 border-t border-cyber-border/60 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono text-cyber-muted">
         <div>
-          WebSec CTF — Designed & Architected by <span className="text-emerald-400 font-bold">SEK Thorn</span>
+          WebSec CTF — Designed &amp; Architected by{' '}
+          <span className="text-emerald-400 font-bold">SEK Thorn</span>
         </div>
         <div className="text-[11px] text-cyber-muted/70">
-          Standards compliant with OWASP, MITRE ATT&CK, NIST SP 800-115, and PTES.
+          Standards compliant with OWASP, MITRE ATT&amp;CK, NIST SP 800-115, and
+          PTES.
         </div>
       </div>
     </div>

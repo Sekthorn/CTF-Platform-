@@ -19,7 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { UserAvatar } from '@/components/common/UserAvatar';
-import { apiClient } from '@/services/api';
+import { getNavCounts } from '@/utils/navCounts';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -87,37 +87,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   useEffect(() => {
     let active = true;
 
-    apiClient
-      .get('/challenges', { params: { limit: 1 } })
-      .then((res) => {
+    getNavCounts()
+      .then((counts) => {
         if (!active) return;
-        const total =
-          res.data?.data?.pagination?.total ??
-          res.data?.pagination?.total ??
-          res.data?.data?.meta?.total ??
-          res.data?.meta?.total;
-        if (typeof total === 'number' && total > 0) {
-          setChallengeCount(total);
-        }
-      })
-      .catch(() => {});
-
-    apiClient
-      .get('/knowledge/lessons', { params: { limit: 1 } })
-      .then((res) => {
-        if (!active) return;
-        const total =
-          res.data?.data?.meta?.total ??
-          res.data?.meta?.total ??
-          res.data?.data?.pagination?.total ??
-          res.data?.pagination?.total ??
-          (Array.isArray(res.data?.data?.items) ? res.data.data.items.length : null) ??
-          (Array.isArray(res.data?.items) ? res.data.items.length : null) ??
-          (Array.isArray(res.data?.data) ? res.data.data.length : null) ??
-          (Array.isArray(res.data) ? res.data.length : null);
-        if (typeof total === 'number' && total > 0) {
-          setKnowledgeCount(total);
-        }
+        if (counts.challenges !== null) setChallengeCount(counts.challenges);
+        if (counts.knowledge !== null) setKnowledgeCount(counts.knowledge);
       })
       .catch(() => {});
 
